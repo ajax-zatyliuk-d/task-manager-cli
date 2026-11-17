@@ -791,6 +791,140 @@ static void test_run_with_delete(void)
     task_manager_free(manager);
 }
 
+static void test_history(void)
+{   
+    TaskManager *manager = task_manager_new();
+    g_assert_nonnull(manager);
+
+    GPtrArray *result_no_history = task_manager_get_history(manager);
+    g_assert_nonnull(result_no_history);
+    g_assert_cmpuint(result_no_history->len, ==, 0);
+    g_ptr_array_unref(result_no_history);
+
+    task_manager_record_command(manager, "");
+    GPtrArray *result_add_empty = task_manager_get_history(manager);
+    g_assert_nonnull(result_add_empty);
+    g_assert_cmpuint(result_add_empty->len, ==, 0);
+    g_ptr_array_unref(result_add_empty);
+
+    
+    task_manager_record_command(manager, "cmd1");
+    task_manager_record_command(manager, "cmd2");
+    task_manager_record_command(manager, "cmd3");
+    task_manager_record_command(manager, "cmd4");
+    task_manager_record_command(manager, "cmd5");
+    task_manager_record_command(manager, "cmd6");
+
+    GPtrArray *result_add_6 = task_manager_get_history(manager);
+    g_assert_nonnull(result_add_6);
+    g_assert_cmpuint(result_add_6->len, ==, 6);
+    g_assert_cmpstr(g_ptr_array_index(result_add_6, 0), ==, "cmd1");
+    g_assert_cmpstr(g_ptr_array_index(result_add_6, 1), ==, "cmd2");
+    g_assert_cmpstr(g_ptr_array_index(result_add_6, 2), ==, "cmd3");
+    g_assert_cmpstr(g_ptr_array_index(result_add_6, 3), ==, "cmd4");
+    g_assert_cmpstr(g_ptr_array_index(result_add_6, 4), ==, "cmd5");
+    g_assert_cmpstr(g_ptr_array_index(result_add_6, 5), ==, "cmd6");
+    g_ptr_array_unref(result_add_6);
+
+    task_manager_record_command(manager, "cmd7");
+    task_manager_record_command(manager, "cmd8");
+    task_manager_record_command(manager, "cmd9");
+    task_manager_record_command(manager, "cmd10");
+    task_manager_record_command(manager, "cmd11");
+    
+    GPtrArray *result_add_10 = task_manager_get_history(manager);
+    g_assert_nonnull(result_add_10);
+    g_assert_cmpuint(result_add_10->len, ==, 10);
+    g_assert_cmpstr(g_ptr_array_index(result_add_10, 0), ==, "cmd2");
+    g_assert_cmpstr(g_ptr_array_index(result_add_10, 9), ==, "cmd11");
+
+    task_manager_record_command(manager, "cmd12");
+    task_manager_record_command(manager, "cmd13");
+    task_manager_record_command(manager, "cmd14");
+
+    g_assert_nonnull(result_add_10);
+    g_assert_cmpuint(result_add_10->len, ==, 10);
+    g_assert_cmpstr(g_ptr_array_index(result_add_10, 0), ==, "cmd2");
+    g_assert_cmpstr(g_ptr_array_index(result_add_10, 9), ==, "cmd11");
+    g_ptr_array_unref(result_add_10);
+
+    GPtrArray *result_add_10_new = task_manager_get_history(manager);
+    g_assert_nonnull(result_add_10_new);
+    g_assert_cmpuint(result_add_10_new->len, ==, 10);
+    g_assert_cmpstr(g_ptr_array_index(result_add_10_new, 0), ==, "cmd5");
+    g_assert_cmpstr(g_ptr_array_index(result_add_10_new, 9), ==, "cmd14");
+    g_ptr_array_unref(result_add_10_new);
+
+    task_manager_free(manager);
+}
+
+static void test_stats(void)
+{   
+    GError *error = NULL;
+
+    TaskManager *manager = task_manager_new();
+    g_assert_nonnull(manager);
+
+    TaskManagerStats statistics = {0};
+
+    // no tasks
+    statistics = task_manager_get_stats(manager);
+    g_assert_cmpuint(statistics.queue_length, ==, 0);
+    g_assert_cmpuint(statistics.tasks, ==, 0);
+    g_assert_cmpuint(statistics.unique_tags, ==, 0);
+
+    // 2 tasks, 2 tag
+    guint task1_id = task_manager_add_task(manager, "cmd1", 7, &error);
+    guint task2_id = task_manager_add_task(manager, "cmd2", 3, &error);
+
+    task_manager_tag_task(manager, task1_id, "tag1", &error);
+    task_manager_tag_task(manager, task1_id, "tag2", &error);
+    task_manager_tag_task(manager, task2_id, "tag2", &error);
+
+    g_assert_no_error(error);
+
+    statistics = task_manager_get_stats(manager);
+    g_assert_cmpuint(statistics.queue_length, ==, 0);
+    g_assert_cmpuint(statistics.tasks, ==, 2);
+    g_assert_cmpuint(statistics.unique_tags, ==, 2);
+
+    // enqueue one task 2 times -> queue size 2
+    task_manager_enqueue_task(manager, task1_id, &error);
+    statistics = task_manager_get_stats(manager);
+    g_assert_cmpuint(statistics.queue_length, ==, 1);
+    g_assert_cmpuint(statistics.tasks, ==, 2);
+    g_assert_cmpuint(statistics.unique_tags, ==, 2);
+
+    task_manager_enqueue_task(manager, task1_id, &error);
+    statistics = task_manager_get_stats(manager);
+    g_assert_cmpuint(statistics.queue_length, ==, 2);
+    g_assert_cmpuint(statistics.tasks, ==, 2);
+    g_assert_cmpuint(statistics.unique_tags, ==, 2);
+
+    // untag task and unique tags = 1
+    task_manager_untag_task(manager, task1_id, "tag1", &error);
+    statistics = task_manager_get_stats(manager);
+    g_assert_cmpuint(statistics.queue_length, ==, 2);
+    g_assert_cmpuint(statistics.tasks, ==, 2);
+    g_assert_cmpuint(statistics.unique_tags, ==, 1);
+    
+    // del and run task
+    Task *task = task_manager_run_next(manager);
+    task_free(task);
+    statistics = task_manager_get_stats(manager);
+    g_assert_cmpuint(statistics.queue_length, ==, 0);
+    g_assert_cmpuint(statistics.tasks, ==, 1);
+    g_assert_cmpuint(statistics.unique_tags, ==, 1);
+
+    task_manager_delete_task(manager, task2_id, &error);
+    statistics = task_manager_get_stats(manager);
+    g_assert_cmpuint(statistics.queue_length, ==, 0);
+    g_assert_cmpuint(statistics.tasks, ==, 0);
+    g_assert_cmpuint(statistics.unique_tags, ==, 0);
+
+    task_manager_free(manager);
+}
+
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
@@ -814,6 +948,10 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/run", test_run);
     g_test_add_func("/task-manager/run/duplicated", test_run_duplicated);
     g_test_add_func("/task-manager/run/with-delete", test_run_with_delete);
+
+    g_test_add_func("/task-manager/history", test_history);
+
+    g_test_add_func("/task-manager/stats", test_stats);
 
     return g_test_run();
 }

@@ -1,11 +1,14 @@
 #include "task_manager.h"
 
+#define CMD_HISTORY_LEN 10
+
 struct _TaskManager {
     GHashTable *tasks_by_id;
     GHashTable *tasks_by_tag;
     GHashTable *unique_tags;
     GSequence *tasks_sorted;
     GQueue *run_queue;
+    GQueue *command_history;
     guint next_id;
 };
 
@@ -147,6 +150,7 @@ TaskManager *task_manager_new(void)
     manager->unique_tags = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
     manager->tasks_sorted = g_sequence_new(NULL);
     manager->run_queue = g_queue_new();
+    manager->command_history = g_queue_new();
     manager->next_id = 1;
 
     return manager;
@@ -163,6 +167,7 @@ void task_manager_free(TaskManager *manager)
     g_sequence_free(manager->tasks_sorted);
     g_hash_table_destroy(manager->tasks_by_id);
     g_queue_free(manager->run_queue);
+    g_queue_free_full(manager->command_history, g_free);
     
     g_free(manager);
 }
@@ -286,4 +291,43 @@ Task *task_manager_run_next(TaskManager *manager)
 
     task_manager_remove_task(manager, task);
     return copy;
+}
+
+void task_manager_record_command(TaskManager *manager, const gchar *command)
+{
+    if (command == NULL || command[0] == '\0') {
+        return;
+    }
+    
+    g_queue_push_tail(manager->command_history, g_strdup(command));
+
+    if (g_queue_get_length(manager->command_history) <= CMD_HISTORY_LEN) {
+        return;
+    }
+
+    gchar *old_cmd = g_queue_pop_head(manager->command_history);
+    g_free(old_cmd);
+}
+
+GPtrArray *task_manager_get_history(TaskManager *manager)
+{
+    GPtrArray *history = g_ptr_array_new_with_free_func(g_free);
+
+    for (const GList *node = manager->command_history->head; node != NULL; node = node->next) {
+        const gchar *cmd = node->data;
+        g_ptr_array_add(history, g_strdup(cmd));
+    }
+
+    return history;
+}
+
+TaskManagerStats task_manager_get_stats(TaskManager *manager)
+{
+    TaskManagerStats stats = {0};
+
+    stats.tasks = g_hash_table_size(manager->tasks_by_id);
+    stats.unique_tags = g_hash_table_size(manager->unique_tags);
+    stats.queue_length = g_queue_get_length(manager->run_queue);
+
+    return stats;
 }

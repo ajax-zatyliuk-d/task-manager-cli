@@ -3,12 +3,20 @@
 #include "task.h"
 
 typedef struct _TaskManager TaskManager;
+typedef struct _TaskManagerStats TaskManagerStats;
+typedef enum _TaskManagerError TaskManagerError;
 
-typedef enum {
+enum _TaskManagerError {
     TM_ERROR_INVALID_PRIORITY,
     TM_ERROR_TASK_NOT_FOUND,
     TM_ERROR_INVALID_TAG,
-} TaskManagerError;
+};
+
+struct _TaskManagerStats {
+    guint tasks;
+    guint unique_tags;
+    guint queue_length;
+};
 
 #define TM_ERROR (task_manager_error_quark())
 
@@ -46,3 +54,7 @@ gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **erro
 // caller need to free resources -> call task_free(task);
 // NULL mean empty queue
 Task *task_manager_run_next(TaskManager *manager);
+
+void task_manager_record_command(TaskManager *manager, const gchar *command);
+GPtrArray *task_manager_get_history(TaskManager *manager);
+TaskManagerStats task_manager_get_stats(TaskManager *manager);
