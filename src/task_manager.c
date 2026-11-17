@@ -1,0 +1,289 @@
+#include "task_manager.h"
+
+struct _TaskManager {
+    GHashTable *tasks_by_id;
+    GHashTable *tasks_by_tag;
+    GHashTable *unique_tags;
+    GSequence *tasks_sorted;
+    GQueue *run_queue;
+    guint next_id;
+};
+
+static void task_destroy(gpointer task)
+{
+    task_free(task);
+}
+
+static void tasks_array_destroy(gpointer ptr)
+{
+    g_ptr_array_free(ptr, TRUE);
+}
+
+static Task *task_manager_task_lookup(GHashTable *tasks_by_id, guint id, GError **error)
+{
+    Task *task = g_hash_table_lookup(tasks_by_id, GUINT_TO_POINTER(id));
+    
+    if (task == NULL) {
+        g_set_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND, "Task Manager Error: not found");
+    }
+
+    return task;
+}
+
+static gboolean validate_tag(const gchar *tag, GError **error)
+{
+    if (tag == NULL || *tag == '\0') {
+        g_set_error_literal(error, TM_ERROR, TM_ERROR_INVALID_TAG, "Tag must not be empty");
+
+        return FALSE;
+    }
+    
+    for (const gchar *p = tag; *p != '\0'; ++p) {
+        gchar c = *p;
+
+        if (!(g_ascii_isdigit(c) || g_ascii_islower(c) || c == '_')) {
+            g_set_error_literal(error, TM_ERROR, TM_ERROR_INVALID_TAG, "Tag must contain only lowercase ASCII letters, digits, or underscores");
+
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+static void task_manager_tasks_by_tag_add(GHashTable *tasks_by_tag, Task *task, const gchar *tag)
+{
+    GPtrArray *tasks = g_hash_table_lookup(tasks_by_tag, tag);
+
+    if (tasks == NULL) {
+        tasks = g_ptr_array_new();
+        g_hash_table_insert(tasks_by_tag, g_strdup(tag), tasks);
+    }
+
+    g_ptr_array_add(tasks, task);
+}
+
+static void task_manager_unique_tags_add(GHashTable *unique_tags, const gchar *tag)
+{
+    if (g_hash_table_contains(unique_tags, tag)) {
+        return;
+    }
+
+    g_hash_table_add(unique_tags, g_strdup(tag));
+}
+
+static void task_manager_remove_task_from_tag(TaskManager *manager, Task *task, const gchar *tag)
+{
+    GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
+    g_assert_nonnull(tasks);
+    
+    guint index = 0;
+    gboolean found = g_ptr_array_find(tasks, task, &index);
+    g_assert_true(found);
+
+    g_ptr_array_remove_index(tasks, index);
+
+    if (tasks->len == 0) {
+        g_hash_table_remove(manager->tasks_by_tag, tag);
+        g_hash_table_remove(manager->unique_tags, tag);
+    }
+}
+
+static gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
+{
+    (void)user_data; // unused data
+    const Task *first = a;
+    const Task *second = b;
+
+    if (first->priority > second->priority) {
+        return -1;
+    }
+    if (first->priority < second->priority) {
+        return 1;
+    }
+
+    if (first->created_at > second->created_at) {
+        return 1;
+    }
+    if (first->created_at < second->created_at) {
+        return -1;
+    }
+
+    if (first->id > second->id) {
+        return 1;
+    }
+    if (first->id < second->id) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static void task_manager_remove_task(TaskManager *manager, Task *task)
+{
+    for (guint i = 0; i < task->tags->len; ++i) {
+        const gchar *tag = g_ptr_array_index(task->tags, i);
+        task_manager_remove_task_from_tag(manager, task, tag);
+    }
+
+    GSequenceIter *it = g_sequence_lookup(manager->tasks_sorted, task, compare_tasks, NULL);
+    g_assert_nonnull(it);
+    g_sequence_remove(it);
+
+    g_queue_remove_all(manager->run_queue, task);
+    g_hash_table_remove(manager->tasks_by_id, GUINT_TO_POINTER(task->id));
+}
+
+GQuark task_manager_error_quark(void)
+{
+    return g_quark_from_static_string("task-manager-error-quark");
+}
+
+TaskManager *task_manager_new(void)
+{
+    TaskManager *manager = g_new(TaskManager, 1);
+    manager->tasks_by_id = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, task_destroy);
+    manager->tasks_by_tag = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, tasks_array_destroy);
+    manager->unique_tags = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+    manager->tasks_sorted = g_sequence_new(NULL);
+    manager->run_queue = g_queue_new();
+    manager->next_id = 1;
+
+    return manager;
+}    
+
+void task_manager_free(TaskManager *manager)
+{
+    if (manager == NULL) {
+        return;
+    }
+
+    g_hash_table_destroy(manager->unique_tags);
+    g_hash_table_destroy(manager->tasks_by_tag);
+    g_sequence_free(manager->tasks_sorted);
+    g_hash_table_destroy(manager->tasks_by_id);
+    g_queue_free(manager->run_queue);
+    
+    g_free(manager);
+}
+
+guint task_manager_add_task(TaskManager *manager, const gchar *title, gint priority, GError **error)
+{
+    if (priority > 10 || priority < 1) {
+        g_set_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY, "Priority must be between 1 and 10, got %d", priority);
+        return 0;
+    }
+
+    guint task_id = manager->next_id;
+    Task *task = task_new(task_id, title, priority);
+    g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(task_id), task);
+    g_sequence_insert_sorted(manager->tasks_sorted, task, compare_tasks, NULL);
+
+    manager->next_id++;
+
+    return task->id;
+}
+
+const Task *task_manager_find_task_by_id(TaskManager *manager, guint id, GError **error)
+{
+    return task_manager_task_lookup(manager->tasks_by_id, id, error);
+}
+
+gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag, GError **error)
+{
+    if (!validate_tag(tag, error)) {
+        return FALSE;
+    }
+
+    Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
+    if (task == NULL) {
+        return FALSE;
+    }
+
+    if (task_is_tag_existed(task, tag)) {
+        return TRUE;
+    }
+
+    task_tags_add(task, tag);
+    task_manager_tasks_by_tag_add(manager->tasks_by_tag, task, tag);
+    task_manager_unique_tags_add(manager->unique_tags, tag);
+
+    return TRUE;
+}
+
+const GPtrArray *task_manager_find_tasks_by_tag(TaskManager *manager, const gchar *tag, GError **error)
+{
+    if (!validate_tag(tag, error)) {
+        return NULL;
+    }
+
+    return g_hash_table_lookup(manager->tasks_by_tag, tag);
+}
+
+gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *tag, GError **error)
+{
+    if (!validate_tag(tag, error)) {
+        return FALSE;
+    }
+
+    Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
+    if (task == NULL) {
+        return FALSE;
+    }
+
+    if (!task_is_tag_existed(task, tag)) {
+        return TRUE;
+    }
+
+    task_manager_remove_task_from_tag(manager, task, tag);
+    task_remove_tag(task, tag);
+
+    return TRUE;
+}
+
+gboolean task_manager_delete_task(TaskManager *manager, guint id, GError **error)
+{
+    Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
+    if (task == NULL) {
+        return FALSE;
+    }
+
+    task_manager_remove_task(manager, task);
+    return TRUE;
+}
+
+GPtrArray *task_manager_top_tasks(TaskManager *manager, guint n)
+{
+    GPtrArray *tasks = g_ptr_array_new();
+    for (GSequenceIter *it = g_sequence_get_begin_iter(manager->tasks_sorted);
+         tasks->len < n && !g_sequence_iter_is_end(it);
+         it = g_sequence_iter_next(it)) {
+        g_ptr_array_add(tasks, g_sequence_get(it));
+    }
+
+    return tasks;
+}
+
+gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **error)
+{
+    Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
+    if (task == NULL) {
+        return FALSE;
+    }
+
+    g_queue_push_tail(manager->run_queue, task);
+    return TRUE;
+}
+
+Task *task_manager_run_next(TaskManager *manager)
+{
+    if (g_queue_is_empty(manager->run_queue)) {
+        return NULL;
+    }
+
+    Task *task = g_queue_pop_head(manager->run_queue);
+    Task *copy = task_copy(task);
+
+    task_manager_remove_task(manager, task);
+    return copy;
+}
