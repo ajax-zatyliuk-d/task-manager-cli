@@ -216,13 +216,24 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
     return TRUE;
 }
 
-const GPtrArray *task_manager_find_tasks_by_tag(TaskManager *manager, const gchar *tag, GError **error)
+GPtrArray *task_manager_find_tasks_by_tag(TaskManager *manager, const gchar *tag, GError **error)
 {
     if (!validate_tag(tag, error)) {
         return NULL;
     }
 
-    return g_hash_table_lookup(manager->tasks_by_tag, tag);
+    GPtrArray *matches = g_ptr_array_new();
+    GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
+
+    if (tasks == NULL) {
+        return matches;
+    }
+
+    for (guint i = 0; i < tasks->len; ++i) {
+        g_ptr_array_add(matches, g_ptr_array_index(tasks, i));
+    }
+
+    return matches;
 }
 
 gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *tag, GError **error)
@@ -330,4 +341,9 @@ TaskManagerStats task_manager_get_stats(TaskManager *manager)
     stats.queue_length = g_queue_get_length(manager->run_queue);
 
     return stats;
+}
+
+gboolean task_manager_is_valid_tag(const gchar *tag, GError **error)
+{
+    return validate_tag(tag, error);
 }

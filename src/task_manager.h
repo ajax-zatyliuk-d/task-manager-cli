@@ -33,10 +33,12 @@ gboolean task_manager_delete_task(TaskManager *manager, guint id, GError **error
 // errors that can be added: TM_ERROR_TASK_NOT_FOUND or TM_ERROR_INVALID_TAG
 gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag, GError **error);
 
-// snake_case like tag and is not empty
-// return GPtrArry if tag is valid and existed and NULL if get some error or not found tag
-// errors that can be added: TM_ERROR_INVALID_TAG
-const GPtrArray *task_manager_find_tasks_by_tag(TaskManager *manager, const gchar *tag, GError **error);
+// returns a new array of borrowed Task pointers
+// no matches: an empty array
+// invalid tag: NULL and TM_ERROR_INVALID_TAG
+// the caller releases the array with g_ptr_array_unref()
+// task pointers remain valid until their tasks are deleted
+GPtrArray *task_manager_find_tasks_by_tag(TaskManager *manager, const gchar *tag, GError **error);
 
 // snake_case like tag and is not empty
 // return TRUE if tag is valid and ID is existed and FALSE if get some error
@@ -58,3 +60,4 @@ Task *task_manager_run_next(TaskManager *manager);
 void task_manager_record_command(TaskManager *manager, const gchar *command);
 GPtrArray *task_manager_get_history(TaskManager *manager);
 TaskManagerStats task_manager_get_stats(TaskManager *manager);
+gboolean task_manager_is_valid_tag(const gchar *tag, GError **error);

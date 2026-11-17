@@ -239,34 +239,41 @@ static void test_find_by_tag(void)
     task_manager_tag_task(manager, task2_id, tag_other, &error);
     g_assert_no_error(error);
 
-    const GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
+    GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
     g_assert_no_error(error);
     g_assert_nonnull(tasks);
     g_assert_cmpint(tasks->len, ==, 2);
     g_assert_true(g_ptr_array_index(tasks, 0) == task1);
     g_assert_true(g_ptr_array_index(tasks, 1) == task2);
+    g_ptr_array_unref(tasks);
 
-    const GPtrArray *other_tasks = task_manager_find_tasks_by_tag(manager, tag_other, &error);
+    GPtrArray *other_tasks = task_manager_find_tasks_by_tag(manager, tag_other, &error);
     g_assert_no_error(error);
     g_assert_nonnull(other_tasks);
     g_assert_cmpint(other_tasks->len, ==, 1);
     g_assert_true(g_ptr_array_index(other_tasks, 0) == task2);
+    g_ptr_array_unref(other_tasks);
 
-    const GPtrArray *no_tasks = task_manager_find_tasks_by_tag(manager, unused_tag, &error);
+    GPtrArray *no_tasks = task_manager_find_tasks_by_tag(manager, unused_tag, &error);
     g_assert_no_error(error);
-    g_assert_null(no_tasks);
+    g_assert_nonnull(no_tasks);
+    g_assert_cmpuint(no_tasks->len, ==, 0);
+    g_ptr_array_unref(no_tasks);
 
-    const GPtrArray *no_tasks_again = task_manager_find_tasks_by_tag(manager, unused_tag, NULL);
-    g_assert_null(no_tasks_again);
+    GPtrArray *no_tasks_again = task_manager_find_tasks_by_tag(manager, unused_tag, NULL);
+    g_assert_nonnull(no_tasks_again);
+    g_assert_cmpuint(no_tasks_again->len, ==, 0);
+    g_ptr_array_unref(no_tasks_again);
 
     task_manager_tag_task(manager, task2_id, tag, &error);
     g_assert_no_error(error);
 
-    const GPtrArray *same_tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
+    GPtrArray *same_tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
     g_assert_no_error(error);
     g_assert_nonnull(same_tasks);
     g_assert_cmpint(same_tasks->len, ==, 2);
     g_assert_true((g_ptr_array_index(same_tasks, 0) == task1) && (g_ptr_array_index(same_tasks, 1) == task2));
+    g_ptr_array_unref(same_tasks);
 
     task_manager_free(manager);
 }
@@ -281,22 +288,22 @@ static void test_find_by_invalid_tag(void)
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
-    const GPtrArray *empty_tag_tasks = task_manager_find_tasks_by_tag(manager, empty, &error);
+    GPtrArray *empty_tag_tasks = task_manager_find_tasks_by_tag(manager, empty, &error);
     g_assert_null(empty_tag_tasks);
     g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
     g_clear_error(&error);
 
-    const GPtrArray *camel_case_tag_tasks = task_manager_find_tasks_by_tag(manager, camel_case, &error);
+    GPtrArray *camel_case_tag_tasks = task_manager_find_tasks_by_tag(manager, camel_case, &error);
     g_assert_null(camel_case_tag_tasks);
     g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
     g_clear_error(&error);
 
-    const GPtrArray *space_tag_tasks = task_manager_find_tasks_by_tag(manager, space, &error);
+    GPtrArray *space_tag_tasks = task_manager_find_tasks_by_tag(manager, space, &error);
     g_assert_null(space_tag_tasks);
     g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
     g_clear_error(&error);
 
-    const GPtrArray *space_tag_tasks_again = task_manager_find_tasks_by_tag(manager, space, NULL);
+    GPtrArray *space_tag_tasks_again = task_manager_find_tasks_by_tag(manager, space, NULL);
     g_assert_null(space_tag_tasks_again);
 
     task_manager_free(manager);
@@ -335,24 +342,27 @@ static void test_untag(void)
     g_assert_no_error(error);
     g_assert_true(result);
 
-    const GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
+    GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
     g_assert_no_error(error);
     g_assert_nonnull(tasks);
     g_assert_cmpint(tasks->len, ==, 1);
     g_assert_true(g_ptr_array_index(tasks, 0) == task2);
     g_assert_cmpint(task1->tags->len, ==, 0);
     g_assert_cmpint(task2->tags->len, ==, 1);
+    g_ptr_array_unref(tasks);
 
     // untag tag from second (and last)
     result = task_manager_untag_task(manager, task2_id, tag, &error);
     g_assert_no_error(error);
     g_assert_true(result);
 
-    const GPtrArray *empty_tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
+    GPtrArray *empty_tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
     g_assert_no_error(error);
-    g_assert_null(empty_tasks);
+    g_assert_nonnull(empty_tasks);
+    g_assert_cmpint(empty_tasks->len, ==, 0);
     g_assert_cmpint(task1->tags->len, ==, 0);
     g_assert_cmpint(task2->tags->len, ==, 0);
+    g_ptr_array_unref(empty_tasks);
 
     // untag untagged
     result = task_manager_untag_task(manager, task1_id, tag, &error);
@@ -364,12 +374,13 @@ static void test_untag(void)
     g_assert_no_error(error);
     g_assert_true(result);
 
-    const GPtrArray *new_tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
+    GPtrArray *new_tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
     g_assert_no_error(error);
     g_assert_nonnull(new_tasks);
     g_assert_cmpint(new_tasks->len, ==, 1);
     g_assert_cmpint(task1->tags->len, ==, 1);
     g_assert_true(new_tasks->pdata[0] == task1);
+    g_ptr_array_unref(new_tasks);
 
     // untag unused tag
     const gchar *unused_tag = "unused_tag";
@@ -456,14 +467,17 @@ static void test_delete_by_valid_id(void)
     g_assert_no_error(error);
     g_assert_true(result);
 
-    const GPtrArray *unique_tag = task_manager_find_tasks_by_tag(manager, second_tag, &error);
+    GPtrArray *unique_tag = task_manager_find_tasks_by_tag(manager, second_tag, &error);
     g_assert_no_error(error);
-    g_assert_null(unique_tag);
+    g_assert_nonnull(unique_tag);
+    g_assert_cmpint(unique_tag->len, ==, 0);
+    g_ptr_array_unref(unique_tag);
 
-    const GPtrArray *default_tag = task_manager_find_tasks_by_tag(manager, tag, &error);
+    GPtrArray *default_tag = task_manager_find_tasks_by_tag(manager, tag, &error);
     g_assert_no_error(error);
     g_assert_cmpint(default_tag->len, ==, 1);
     g_assert_true(g_ptr_array_index(default_tag, 0) == task2);
+    g_ptr_array_unref(default_tag);
 
     GPtrArray *tasks_after_delete = task_manager_top_tasks(manager, 1);
     g_assert_nonnull(tasks_after_delete);
