@@ -3,7 +3,8 @@
 typedef struct _CliCommand CliCommand;
 typedef gboolean (*CliHandler)(TaskManager *, gchar **, GString *, GError **);
 
-struct _CliCommand {
+struct _CliCommand
+{
     const gchar *name;
     CliHandler handler;
 };
@@ -64,7 +65,7 @@ static gboolean cmd_add(TaskManager *manager, gchar **args, GString *output, GEr
     while (*first_tag != NULL && (*first_tag)[0] != '#') {
         ++first_tag;
     }
-    
+
     if (first_tag == title_words) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "missing task title");
         return FALSE;
@@ -77,7 +78,7 @@ static gboolean cmd_add(TaskManager *manager, gchar **args, GString *output, GEr
     GString *title = g_string_new(NULL);
 
     for (gchar **word = title_words; word != first_tag; ++word) {
-        if(word != title_words) {
+        if (word != title_words) {
             g_string_append_c(title, ' ');
         }
         g_string_append(title, *word);
@@ -108,7 +109,7 @@ static gboolean cmd_del(TaskManager *manager, gchar **args, GString *output, GEr
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: del <id>");
         return FALSE;
     }
-    
+
     guint id;
     if (!parse_id(args[0], &id, error)) {
         return FALSE;
@@ -128,7 +129,7 @@ static gboolean cmd_tag(TaskManager *manager, gchar **args, GString *output, GEr
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: tag <id> <#tag>");
         return FALSE;
     }
-    
+
     guint id;
     if (!parse_id(args[0], &id, error)) {
         return FALSE;
@@ -154,7 +155,7 @@ static gboolean cmd_untag(TaskManager *manager, gchar **args, GString *output, G
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: untag <id> <#tag>");
         return FALSE;
     }
-    
+
     guint id;
     if (!parse_id(args[0], &id, error)) {
         return FALSE;
@@ -180,7 +181,7 @@ static gboolean cmd_enqueue(TaskManager *manager, gchar **args, GString *output,
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: enqueue <id>");
         return FALSE;
     }
-    
+
     guint id;
     if (!parse_id(args[0], &id, error)) {
         return FALSE;
@@ -287,22 +288,19 @@ static gboolean cmd_stats(TaskManager *manager, gchar **args, GString *output, G
 }
 
 static const CliCommand commands[] = {
-    { "add", cmd_add },
-    { "del", cmd_del },
-    { "tag", cmd_tag },
-    { "untag", cmd_untag },
-    { "enqueue", cmd_enqueue },
-    { "find", cmd_find },
-    { "top", cmd_top },
-    { "run", cmd_run },
-    { "history", cmd_history },
-    { "stats", cmd_stats },
+    {"add", cmd_add},
+    {"del", cmd_del},
+    {"tag", cmd_tag},
+    {"untag", cmd_untag},
+    {"enqueue", cmd_enqueue},
+    {"find", cmd_find},
+    {"top", cmd_top},
+    {"run", cmd_run},
+    {"history", cmd_history},
+    {"stats", cmd_stats},
 };
 
-GQuark cli_error_quark(void)
-{
-    return g_quark_from_static_string("cli-error-quark");
-}
+GQuark cli_error_quark(void) { return g_quark_from_static_string("cli-error-quark"); }
 
 CliStatus cli_execute_line(TaskManager *manager, const gchar *line, GString *output, GError **error)
 {

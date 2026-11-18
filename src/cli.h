@@ -5,12 +5,14 @@
 typedef enum _CliStatus CliStatus;
 typedef enum _CliError CliError;
 
-enum _CliStatus {
+enum _CliStatus
+{
     CLI_CONTINUE,
     CLI_QUIT,
 };
 
-enum _CliError {
+enum _CliError
+{
     CLI_ERROR_UNKNOWN_COMMAND,
     CLI_ERROR_USAGE,
 };
