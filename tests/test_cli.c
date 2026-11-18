@@ -817,7 +817,7 @@ static void test_cli_run(void)
     status = cli_execute_line(manager, "run", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "running: first (1, 3)\n");
+    g_assert_cmpstr(output->str, ==, "running: first (id 1, priority 3)\n");
 
     const Task *task = task_manager_find_task_by_id(manager, id1, &error);
     g_assert_null(task);
@@ -837,7 +837,7 @@ static void test_cli_run(void)
     status = cli_execute_line(manager, "run", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "running: second (2, 9)\n");
+    g_assert_cmpstr(output->str, ==, "running: second (id 2, priority 9)\n");
 
     stats = task_manager_get_stats(manager);
     g_assert_cmpuint(stats.tasks, ==, 0);

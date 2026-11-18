@@ -232,7 +232,9 @@ static gboolean cmd_run(TaskManager *manager, gchar **args, GString *output, GEr
         return TRUE;
     }
 
-    g_string_append_printf(output, "running: %s (%u, %d)\n", task->title, task->id, task->priority);
+    g_string_append_printf(output, "running: %s (id %u, priority %d)\n", task->title, task->id, task->priority);
+
+    task_free(task);
     return TRUE;
 }
 
@@ -293,12 +295,12 @@ CliStatus cli_execute_line(TaskManager *manager, const gchar *line, GString *out
 
     gchar *command = g_strstrip(g_strdup(line));
     if (command == NULL || command[0] == '\0') {
-        goto exit_fail;
+        goto free_command;
     }
 
     if (g_strcmp0(command, "quit") == 0) {
         result = CLI_QUIT;
-        goto exit_fail;
+        goto free_command;
     }
 
     gchar **words = g_regex_split_simple("[ \t]+", command, 0, 0);
@@ -307,19 +309,19 @@ CliStatus cli_execute_line(TaskManager *manager, const gchar *line, GString *out
     }
 
     for (gsize i = 0; i < G_N_ELEMENTS(commands); ++i) {
-        const CliCommand *command = &commands[i];
+        const CliCommand *entry = &commands[i];
 
-        if (g_strcmp0(words[0], command->name) == 0) {
-            command->handler(manager, words + 1, output, error);
-            goto exit;
+        if (g_strcmp0(words[0], entry->name) == 0) {
+            entry->handler(manager, words + 1, output, error);
+            goto free_words;
         }
     }
 
     g_set_error(error, CLI_ERROR, CLI_ERROR_UNKNOWN_COMMAND, "unknown command: %s", words[0]);
-exit:
-    g_strfreev(words);
 
-exit_fail:
+free_words:
+    g_strfreev(words);
+free_command:
     g_free(command);
     return result;
 }
