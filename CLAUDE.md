@@ -139,7 +139,7 @@ ctest --preset debug                      # усі тести
 
 | Пресет | Що | Навіщо |
 | --- | --- | --- |
-| `debug` | `Debug`, `ENABLE_ASAN=ON` (ASan + UBSan) | щоденна розробка; витік чи UB валить тест |
+| `debug` | `Debug`, `ENABLE_SAN=ON` (ASan + UBSan, UB не відновлюється) | щоденна розробка; витік чи UB валить тест |
 | `release` | `RelWithDebInfo`, без санітайзерів | valgrind (не поєднується з ASan) |
 
 `autobuild.sh` обгортає ці команди:
