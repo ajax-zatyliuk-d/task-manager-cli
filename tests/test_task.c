@@ -10,7 +10,7 @@ static void test_task_new(void)
     g_assert_nonnull(task);
     g_assert_nonnull(task->title);
     g_assert_nonnull(task->tags);
-    
+
     g_assert_cmpuint(task->id, ==, id);
     g_assert_cmpstr(task->title, ==, title);
     g_assert_cmpuint(task->tags->len, ==, 0);
@@ -39,7 +39,7 @@ static void test_task_copy(void)
     g_assert_nonnull(copy);
     g_assert_nonnull(copy->title);
     g_assert_nonnull(copy->tags);
-    
+
     g_assert_cmpuint(copy->id, ==, id);
     g_assert_cmpstr(copy->title, ==, title);
     g_assert_cmpuint(copy->tags->len, ==, 2);

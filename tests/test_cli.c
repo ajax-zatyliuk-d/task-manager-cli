@@ -83,7 +83,7 @@ static void test_cli_add(void)
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "added task 1\n");
-    
+
     const Task *task1 = task_manager_find_task_by_id(manager, 1, &error);
     g_assert_no_error(error);
     g_assert_cmpstr(task1->title, ==, "buy milk");
@@ -91,13 +91,13 @@ static void test_cli_add(void)
     g_assert_cmpint(task1->priority, ==, 5);
 
     g_string_truncate(output, 0);
-    
+
     // cmd2 without tags
     status = cli_execute_line(manager, cmd2, output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "added task 2\n");
-    
+
     const Task *task2 = task_manager_find_task_by_id(manager, 2, &error);
     g_assert_no_error(error);
     g_assert_cmpstr(task2->title, ==, "title");
@@ -111,7 +111,7 @@ static void test_cli_add(void)
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "added task 3\n");
-    
+
     const Task *task3 = task_manager_find_task_by_id(manager, 3, &error);
     g_assert_no_error(error);
     g_assert_cmpstr(task3->title, ==, "buy milk");
@@ -121,7 +121,6 @@ static void test_cli_add(void)
     g_string_free(output, TRUE);
     task_manager_free(manager);
 }
-
 
 static void test_cli_add_invalid(void)
 {
@@ -232,16 +231,17 @@ static void test_cli_del_invalid(void)
     g_assert_no_error(error);
     g_assert_cmpuint(id, ==, 1);
 
-    const struct {
+    const struct
+    {
         const gchar *command;
         GQuark domain;
         gint code;
     } cases[] = {
-        { "del",     CLI_ERROR, CLI_ERROR_USAGE },
-        { "del 1 2", CLI_ERROR, CLI_ERROR_USAGE },
-        { "del abc", CLI_ERROR, CLI_ERROR_USAGE },
-        { "del 0",   CLI_ERROR, CLI_ERROR_USAGE },
-        { "del 999", TM_ERROR,  TM_ERROR_TASK_NOT_FOUND },
+        {"del", CLI_ERROR, CLI_ERROR_USAGE},
+        {"del 1 2", CLI_ERROR, CLI_ERROR_USAGE},
+        {"del abc", CLI_ERROR, CLI_ERROR_USAGE},
+        {"del 0", CLI_ERROR, CLI_ERROR_USAGE},
+        {"del 999", TM_ERROR, TM_ERROR_TASK_NOT_FOUND},
     };
 
     for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {
@@ -333,20 +333,21 @@ static void test_cli_tag_invalid(void)
     g_assert_no_error(error);
     g_assert_cmpuint(id, ==, 1);
 
-    const struct {
+    const struct
+    {
         const gchar *command;
         GQuark domain;
         gint code;
     } cases[] = {
-        { "tag",               CLI_ERROR, CLI_ERROR_USAGE },
-        { "tag 1",             CLI_ERROR, CLI_ERROR_USAGE },
-        { "tag 1 #work extra", CLI_ERROR, CLI_ERROR_USAGE },
-        { "tag abc #work",     CLI_ERROR, CLI_ERROR_USAGE },
-        { "tag 0 #work",       CLI_ERROR, CLI_ERROR_USAGE },
-        { "tag 1 work",        CLI_ERROR, CLI_ERROR_USAGE },
-        { "tag 1 #Bad",      TM_ERROR,  TM_ERROR_INVALID_TAG },
-        { "tag 1 #",           TM_ERROR,  TM_ERROR_INVALID_TAG },
-        { "tag 999 #work",     TM_ERROR,  TM_ERROR_TASK_NOT_FOUND },
+        {"tag", CLI_ERROR, CLI_ERROR_USAGE},
+        {"tag 1", CLI_ERROR, CLI_ERROR_USAGE},
+        {"tag 1 #work extra", CLI_ERROR, CLI_ERROR_USAGE},
+        {"tag abc #work", CLI_ERROR, CLI_ERROR_USAGE},
+        {"tag 0 #work", CLI_ERROR, CLI_ERROR_USAGE},
+        {"tag 1 work", CLI_ERROR, CLI_ERROR_USAGE},
+        {"tag 1 #Bad", TM_ERROR, TM_ERROR_INVALID_TAG},
+        {"tag 1 #", TM_ERROR, TM_ERROR_INVALID_TAG},
+        {"tag 999 #work", TM_ERROR, TM_ERROR_TASK_NOT_FOUND},
     };
 
     for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {
@@ -458,20 +459,21 @@ static void test_cli_untag_invalid(void)
     g_assert_true(task_manager_tag_task(manager, id, "work", &error));
     g_assert_no_error(error);
 
-    const struct {
+    const struct
+    {
         const gchar *command;
         GQuark domain;
         gint code;
     } cases[] = {
-        { "untag",               CLI_ERROR, CLI_ERROR_USAGE },
-        { "untag 1",             CLI_ERROR, CLI_ERROR_USAGE },
-        { "untag 1 #work extra", CLI_ERROR, CLI_ERROR_USAGE },
-        { "untag abc #work",     CLI_ERROR, CLI_ERROR_USAGE },
-        { "untag 0 #work",       CLI_ERROR, CLI_ERROR_USAGE },
-        { "untag 1 work",        CLI_ERROR, CLI_ERROR_USAGE },
-        { "untag 1 #Bad",      TM_ERROR,  TM_ERROR_INVALID_TAG },
-        { "untag 1 #",           TM_ERROR,  TM_ERROR_INVALID_TAG },
-        { "untag 999 #work",     TM_ERROR,  TM_ERROR_TASK_NOT_FOUND },
+        {"untag", CLI_ERROR, CLI_ERROR_USAGE},
+        {"untag 1", CLI_ERROR, CLI_ERROR_USAGE},
+        {"untag 1 #work extra", CLI_ERROR, CLI_ERROR_USAGE},
+        {"untag abc #work", CLI_ERROR, CLI_ERROR_USAGE},
+        {"untag 0 #work", CLI_ERROR, CLI_ERROR_USAGE},
+        {"untag 1 work", CLI_ERROR, CLI_ERROR_USAGE},
+        {"untag 1 #Bad", TM_ERROR, TM_ERROR_INVALID_TAG},
+        {"untag 1 #", TM_ERROR, TM_ERROR_INVALID_TAG},
+        {"untag 999 #work", TM_ERROR, TM_ERROR_TASK_NOT_FOUND},
     };
 
     for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {
@@ -549,16 +551,17 @@ static void test_cli_enqueue_invalid(void)
     g_assert_no_error(error);
     g_assert_cmpuint(id, ==, 1);
 
-    const struct {
+    const struct
+    {
         const gchar *command;
         GQuark domain;
         gint code;
     } cases[] = {
-        { "enqueue",     CLI_ERROR, CLI_ERROR_USAGE },
-        { "enqueue 1 2", CLI_ERROR, CLI_ERROR_USAGE },
-        { "enqueue abc", CLI_ERROR, CLI_ERROR_USAGE },
-        { "enqueue 0",   CLI_ERROR, CLI_ERROR_USAGE },
-        { "enqueue 999", TM_ERROR,  TM_ERROR_TASK_NOT_FOUND },
+        {"enqueue", CLI_ERROR, CLI_ERROR_USAGE},
+        {"enqueue 1 2", CLI_ERROR, CLI_ERROR_USAGE},
+        {"enqueue abc", CLI_ERROR, CLI_ERROR_USAGE},
+        {"enqueue 0", CLI_ERROR, CLI_ERROR_USAGE},
+        {"enqueue 999", TM_ERROR, TM_ERROR_TASK_NOT_FOUND},
     };
 
     for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {
@@ -620,10 +623,7 @@ static void test_cli_find(void)
     status = cli_execute_line(manager, "find #work", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
-    g_assert_true(
-        g_strcmp0(output->str, "1 5 first\n2 7 second\n") == 0 ||
-        g_strcmp0(output->str, "2 7 second\n1 5 first\n") == 0
-    );
+    g_assert_true(g_strcmp0(output->str, "1 5 first\n2 7 second\n") == 0 || g_strcmp0(output->str, "2 7 second\n1 5 first\n") == 0);
 
     g_string_truncate(output, 0);
 
@@ -631,10 +631,7 @@ static void test_cli_find(void)
     status = cli_execute_line(manager, "find #work", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
-    g_assert_true(
-        g_strcmp0(output->str, "1 5 first\n2 7 second\n") == 0 ||
-        g_strcmp0(output->str, "2 7 second\n1 5 first\n") == 0
-    );
+    g_assert_true(g_strcmp0(output->str, "1 5 first\n2 7 second\n") == 0 || g_strcmp0(output->str, "2 7 second\n1 5 first\n") == 0);
 
     g_string_truncate(output, 0);
 
@@ -674,16 +671,17 @@ static void test_cli_find_invalid(void)
     g_assert_true(task_manager_tag_task(manager, id, "work", &error));
     g_assert_no_error(error);
 
-    const struct {
+    const struct
+    {
         const gchar *command;
         GQuark domain;
         gint code;
     } cases[] = {
-        { "find",             CLI_ERROR, CLI_ERROR_USAGE },
-        { "find #work extra", CLI_ERROR, CLI_ERROR_USAGE },
-        { "find work",        CLI_ERROR, CLI_ERROR_USAGE },
-        { "find #Bad",      TM_ERROR,  TM_ERROR_INVALID_TAG },
-        { "find #",           TM_ERROR,  TM_ERROR_INVALID_TAG },
+        {"find", CLI_ERROR, CLI_ERROR_USAGE},
+        {"find #work extra", CLI_ERROR, CLI_ERROR_USAGE},
+        {"find work", CLI_ERROR, CLI_ERROR_USAGE},
+        {"find #Bad", TM_ERROR, TM_ERROR_INVALID_TAG},
+        {"find #", TM_ERROR, TM_ERROR_INVALID_TAG},
     };
 
     for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {
@@ -743,13 +741,14 @@ static void test_cli_top(void)
     g_assert_no_error(error);
     g_assert_cmpuint(id3, ==, 3);
 
-    const struct {
+    const struct
+    {
         const gchar *command;
         const gchar *expected_output;
     } cases[] = {
-        { "top 2",  "2 9 high\n3 5 medium\n" },
-        { "top 10", "2 9 high\n3 5 medium\n1 3 low\n" },
-        { "top 0",  "" },
+        {"top 2", "2 9 high\n3 5 medium\n"},
+        {"top 10", "2 9 high\n3 5 medium\n1 3 low\n"},
+        {"top 0", ""},
     };
 
     for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {
@@ -958,16 +957,16 @@ static void test_cli_history_limit(void)
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==,
-                    "add 5 task2\n"
-                    "add 5 task3\n"
-                    "add 5 task4\n"
-                    "add 5 task5\n"
-                    "add 5 task6\n"
-                    "add 5 task7\n"
-                    "add 5 task8\n"
-                    "add 5 task9\n"
-                    "add 5 task10\n"
-                    "add 5 task11\n");
+        "add 5 task2\n"
+        "add 5 task3\n"
+        "add 5 task4\n"
+        "add 5 task5\n"
+        "add 5 task6\n"
+        "add 5 task7\n"
+        "add 5 task8\n"
+        "add 5 task9\n"
+        "add 5 task10\n"
+        "add 5 task11\n");
 
     g_string_free(output, TRUE);
     task_manager_free(manager);

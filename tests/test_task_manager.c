@@ -20,13 +20,13 @@ static void test_add_find(void)
 
     const Task *task_first = task_manager_find_task_by_id(manager, id_first, &error);
     g_assert_no_error(error);
-    do { if ((task_first) != ((void*)0)) ; else g_assertion_message (((gchar*) 0), "/home/zatyliuk/Work/glib_test/tests/test_task_manager.c", 23, ((const char*) (__func__)), "'" "task_first" "' should not be NULL"); } while (0);
+    g_assert_nonnull(task_first);
     g_assert_nonnull(task_first->tags);
     g_assert_nonnull(task_first->title);
     g_assert_cmpuint(task_first->id, ==, 1);
     g_assert_cmpint(task_first->priority, ==, priority_first);
     g_assert_cmpstr(task_first->title, ==, title_first);
-    
+
     const Task *task_second = task_manager_find_task_by_id(manager, id_second, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task_second);
@@ -441,7 +441,6 @@ static void test_invalid_untag(void)
     task_manager_free(manager);
 }
 
-
 static void test_delete_by_valid_id(void)
 {
     GError *error = NULL;
@@ -528,11 +527,11 @@ static void test_top(void)
     const gchar *title2 = "cmd2";
     const gchar *title3 = "cmd3";
     const gchar *title4 = "cmd4";
-    
+
     gint priority7 = 7;
     gint priority5 = 5;
     gint priority2 = 2;
-    
+
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -577,10 +576,10 @@ static void test_run(void)
     const gchar *title1 = "cmd1";
     const gchar *title2 = "cmd2";
     const gchar *title3 = "cmd3";
-    
+
     gint priority5 = 5;
     gint priority2 = 2;
-    
+
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -643,7 +642,7 @@ static void test_run(void)
     g_assert_nonnull(top_tasks);
     g_assert_cmpuint(top_tasks->len, ==, 1);
     g_assert_cmpuint(((const Task *)g_ptr_array_index(top_tasks, 0))->id, !=, task2_id);
-    
+
     g_ptr_array_unref(top_tasks);
     task_free(next_task);
 
@@ -672,10 +671,10 @@ static void test_run_duplicated(void)
     GError *error = NULL;
     const gchar *title1 = "cmd1";
     const gchar *title2 = "cmd2";
-    
+
     gint priority5 = 5;
     gint priority2 = 2;
-    
+
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -758,10 +757,10 @@ static void test_run_with_delete(void)
     GError *error = NULL;
     const gchar *title1 = "cmd1";
     const gchar *title2 = "cmd2";
-    
+
     gint priority5 = 5;
     gint priority2 = 2;
-    
+
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -811,7 +810,7 @@ static void test_run_with_delete(void)
 }
 
 static void test_history(void)
-{   
+{
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -826,7 +825,6 @@ static void test_history(void)
     g_assert_cmpuint(result_add_empty->len, ==, 0);
     g_ptr_array_unref(result_add_empty);
 
-    
     task_manager_record_command(manager, "cmd1");
     task_manager_record_command(manager, "cmd2");
     task_manager_record_command(manager, "cmd3");
@@ -850,7 +848,7 @@ static void test_history(void)
     task_manager_record_command(manager, "cmd9");
     task_manager_record_command(manager, "cmd10");
     task_manager_record_command(manager, "cmd11");
-    
+
     GPtrArray *result_add_10 = task_manager_get_history(manager);
     g_assert_nonnull(result_add_10);
     g_assert_cmpuint(result_add_10->len, ==, 10);
@@ -878,7 +876,7 @@ static void test_history(void)
 }
 
 static void test_stats(void)
-{   
+{
     GError *error = NULL;
 
     TaskManager *manager = task_manager_new();
@@ -926,7 +924,7 @@ static void test_stats(void)
     g_assert_cmpuint(statistics.queue_length, ==, 2);
     g_assert_cmpuint(statistics.tasks, ==, 2);
     g_assert_cmpuint(statistics.unique_tags, ==, 1);
-    
+
     // del and run task
     Task *task = task_manager_run_next(manager);
     task_free(task);
@@ -956,7 +954,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/tag/invalid", test_invalid_tag);
     g_test_add_func("/task-manager/tag/find-valid", test_find_by_tag);
     g_test_add_func("/task-manager/tag/find-invalid", test_find_by_invalid_tag);
-    
+
     g_test_add_func("/task-manager/untag/valid", test_untag);
     g_test_add_func("/task-manager/untag/invalid", test_invalid_untag);
 
