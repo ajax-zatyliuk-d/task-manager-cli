@@ -196,6 +196,75 @@ static gboolean cmd_find(TaskManager *manager, gchar **args, GString *output, GE
     return TRUE;
 }
 
+static gboolean cmd_top(TaskManager *manager, gchar **args, GString *output, GError **error)
+{
+    if (args[0] == NULL || args[1] != NULL) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: top <n>");
+        return FALSE;
+    }
+
+    guint64 n;
+    if (!g_ascii_string_to_unsigned(args[0], 10, 0, G_MAXUINT, &n, NULL)) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "expected an unsigned int <n>");
+        return FALSE;
+    }
+
+    GPtrArray *tasks = task_manager_top_tasks(manager, (guint)n);
+    for (guint i = 0; i < tasks->len; ++i) {
+        const Task *task = g_ptr_array_index(tasks, i);
+        g_string_append_printf(output, "%u %d %s\n", task->id, task->priority, task->title);
+    }
+
+    g_ptr_array_unref(tasks);
+    return TRUE;
+}
+
+static gboolean cmd_run(TaskManager *manager, gchar **args, GString *output, GError **error)
+{
+    if (args[0] != NULL) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: run");
+        return FALSE;
+    }
+
+    Task *task = task_manager_run_next(manager);
+    if (task == NULL) {
+        g_string_append_printf(output, "queue is empty\n");
+        return TRUE;
+    }
+
+    g_string_append_printf(output, "running: %s (%u, %d)\n", task->title, task->id, task->priority);
+    return TRUE;
+}
+
+static gboolean cmd_history(TaskManager *manager, gchar **args, GString *output, GError **error)
+{
+    if (args[0] != NULL) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: history");
+        return FALSE;
+    }
+
+    GPtrArray *history = task_manager_get_history(manager);
+    for (guint i = 0; i < history->len; ++i) {
+        g_string_append_printf(output, "%s\n", (gchar *)g_ptr_array_index(history, i));
+    }
+
+    g_ptr_array_unref(history);
+    return TRUE;
+}
+
+static gboolean cmd_stats(TaskManager *manager, gchar **args, GString *output, GError **error)
+{
+    if (args[0] != NULL) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: stats");
+        return FALSE;
+    }
+
+    TaskManagerStats stats = task_manager_get_stats(manager);
+    g_string_append_printf(output, "tasks: %u\ntags: %u\nqueue: %u\n", stats.tasks, stats.unique_tags, stats.queue_length);
+
+    return TRUE;
+}
+
 static const CliCommand commands[] = {
     { "add", cmd_add },
     { "del", cmd_del },
@@ -203,6 +272,10 @@ static const CliCommand commands[] = {
     { "untag", cmd_untag },
     { "enqueue", cmd_enqueue },
     { "find", cmd_find },
+    { "top", cmd_top },
+    { "run", cmd_run },
+    { "history", cmd_history },
+    { "stats", cmd_stats },
 };
 
 GQuark cli_error_quark(void)
@@ -228,8 +301,10 @@ CliStatus cli_execute_line(TaskManager *manager, const gchar *line, GString *out
         goto exit_fail;
     }
 
-    task_manager_record_command(manager, command);
     gchar **words = g_regex_split_simple("[ \t]+", command, 0, 0);
+    if (g_strcmp0(words[0], "history") != 0) {
+        task_manager_record_command(manager, command);
+    }
 
     for (gsize i = 0; i < G_N_ELEMENTS(commands); ++i) {
         const CliCommand *command = &commands[i];
