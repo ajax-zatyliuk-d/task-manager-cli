@@ -172,6 +172,21 @@ static void test_cli_add_invalid(void)
     g_assert_cmpuint(stats.tasks, ==, 0);
     g_assert_cmpuint(output->len, ==, 0);
 
+    status = cli_execute_line(manager, "add 5 b #y #y", output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG);
+    g_clear_error(&error);
+    g_assert_cmpstr(output->str, ==, "");
+
+    stats = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats.tasks, ==, 0);
+    g_assert_cmpuint(stats.unique_tags, ==, 0);
+
+    status = cli_execute_line(manager, "add 5 b #y", output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_assert_cmpstr(output->str, ==, "added task 1\n");
+
     g_string_free(output, TRUE);
     task_manager_free(manager);
 }
@@ -282,6 +297,25 @@ static void test_cli_tag(void)
     TaskManagerStats stats = task_manager_get_stats(manager);
     g_assert_cmpuint(stats.tasks, ==, 1);
     g_ptr_array_unref(tasks);
+
+    g_string_truncate(output, 0);
+
+    status = cli_execute_line(manager, "tag 1 #work", output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG);
+    g_clear_error(&error);
+    g_assert_cmpstr(output->str, ==, "");
+
+    GPtrArray *matches_after_duplicate = task_manager_find_tasks_by_tag(manager, "work", &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(matches_after_duplicate);
+    g_assert_cmpuint(matches_after_duplicate->len, ==, 1);
+
+    const Task *tagged_task = g_ptr_array_index(matches_after_duplicate, 0);
+    g_assert_cmpuint(tagged_task->id, ==, 1);
+    g_assert_cmpuint(tagged_task->tags->len, ==, 1);
+    g_assert_cmpstr(g_ptr_array_index(tagged_task->tags, 0), ==, "work");
+    g_ptr_array_unref(matches_after_duplicate);
 
     g_string_free(output, TRUE);
     task_manager_free(manager);

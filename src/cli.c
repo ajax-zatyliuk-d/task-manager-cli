@@ -21,6 +21,33 @@ static gboolean parse_id(const gchar *word, guint *id, GError **error)
     return TRUE;
 }
 
+static gboolean validate_add_tags(gchar **first_tag, GError **error)
+{
+    if (*first_tag == NULL) {
+        return TRUE;
+    }
+
+    g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+    for (gchar **word = first_tag; *word != NULL; ++word) {
+        if ((*word)[0] != '#') {
+            g_set_error(error, CLI_ERROR, CLI_ERROR_USAGE, "expected a tag, got: %s", *word);
+            return FALSE;
+        }
+
+        const gchar *tag = *word + 1;
+        if (!task_manager_is_valid_tag(tag, error)) {
+            return FALSE;
+        }
+
+        if (!g_hash_table_add(seen, *word)) {
+            g_set_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
 // add <priority> <title> [#tag1 #tag2 ...]
 static gboolean cmd_add(TaskManager *manager, gchar **args, GString *output, GError **error)
 {
@@ -43,16 +70,8 @@ static gboolean cmd_add(TaskManager *manager, gchar **args, GString *output, GEr
         return FALSE;
     }
 
-    for (gchar **word = first_tag; *word != NULL; ++word) {
-        if ((*word)[0] != '#') {
-            g_set_error(error, CLI_ERROR, CLI_ERROR_USAGE, "expected a tag, got: %s", *word);
-            return FALSE;
-        }
-
-        const gchar *tag = *word + 1; // save without '#'
-        if (!task_manager_is_valid_tag(tag, error)) {
-            return FALSE;
-        }
+    if (!validate_add_tags(first_tag, error)) {
+        return FALSE;
     }
 
     GString *title = g_string_new(NULL);
@@ -287,23 +306,22 @@ GQuark cli_error_quark(void)
 
 CliStatus cli_execute_line(TaskManager *manager, const gchar *line, GString *output, GError **error)
 {
-    CliStatus result = CLI_CONTINUE;
-
     if (line == NULL) {
-        return result;
+        return CLI_CONTINUE;
     }
 
-    gchar *command = g_strstrip(g_strdup(line));
-    if (command == NULL || command[0] == '\0') {
-        goto free_command;
+    g_autofree gchar *command = g_strdup(line);
+    g_strstrip(command);
+
+    if (command[0] == '\0') {
+        return CLI_CONTINUE;
     }
 
     if (g_strcmp0(command, "quit") == 0) {
-        result = CLI_QUIT;
-        goto free_command;
+        return CLI_QUIT;
     }
 
-    gchar **words = g_regex_split_simple("[ \t]+", command, 0, 0);
+    g_auto(GStrv) words = g_regex_split_simple("[ \t]+", command, 0, 0);
     if (g_strcmp0(words[0], "history") != 0) {
         task_manager_record_command(manager, command);
     }
@@ -313,15 +331,10 @@ CliStatus cli_execute_line(TaskManager *manager, const gchar *line, GString *out
 
         if (g_strcmp0(words[0], entry->name) == 0) {
             entry->handler(manager, words + 1, output, error);
-            goto free_words;
+            return CLI_CONTINUE;
         }
     }
 
     g_set_error(error, CLI_ERROR, CLI_ERROR_UNKNOWN_COMMAND, "unknown command: %s", words[0]);
-
-free_words:
-    g_strfreev(words);
-free_command:
-    g_free(command);
-    return result;
+    return CLI_CONTINUE;
 }

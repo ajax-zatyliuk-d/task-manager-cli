@@ -73,9 +73,15 @@
   `task_free(NULL)` поки не підтримується.
 - Теги: без `#`, непорожній рядок з `[a-z0-9_]`. Недопустимий тег
   відхиляється з `TM_ERROR_INVALID_TAG`, а не нормалізується.
-  `task_manager_tag_task()` / `_untag_task()`: повторний tag і untag
-  відсутнього тегу — тихий `TRUE` без змін; невідомий ID дає
-  `TM_ERROR_TASK_NOT_FOUND`. `FALSE` завжди супроводжується `GError`.
+  `task_manager_tag_task()`: тег, який задача вже має, — `FALSE` та
+  `TM_ERROR_DUPLICATE_TAG` без змін стану (вимога 4 PDF). `add` з повтором
+  тегу в одній команді дає ту саму помилку до створення задачі.
+  `task_manager_untag_task()` для відсутнього тегу — тихий `TRUE`.
+  Невідомий ID дає `TM_ERROR_TASK_NOT_FOUND`. `FALSE` завжди
+  супроводжується `GError`.
+- Дозволено `g_autoptr` / `g_autofree` / `g_auto` (GCC/Clang, GLib ≥ 2.44);
+  для `TaskManager` є `G_DEFINE_AUTOPTR_CLEANUP_FUNC`. Повернення
+  такого значення з функції — лише через `g_steal_pointer()`.
 - `task_manager_find_tasks_by_tag()` повертає `GPtrArray *` (без `const`).
   Валідний тег завжди дає новий масив; якщо збігів немає, `len == 0`.
   Недопустимий тег — `NULL` та `TM_ERROR_INVALID_TAG`. Викликач володіє

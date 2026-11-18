@@ -206,7 +206,8 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
     }
 
     if (task_is_tag_existed(task, tag)) {
-        return TRUE;
+        g_set_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG, "task %u already has tag %s", id, tag);
+        return FALSE;
     }
 
     task_tags_add(task, tag);

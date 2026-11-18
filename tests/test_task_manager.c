@@ -130,9 +130,12 @@ static void test_tag(void)
     g_assert_cmpstr(task1->tags->pdata[0], ==, tag);
 
     result = task_manager_tag_task(manager, task1_id, tag, &error);
-    g_assert_no_error(error);
-    g_assert_true(result);
-    g_assert_cmpint(task1->tags->len, ==, 1);
+    g_assert_false(result);
+    g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG);
+    g_clear_error(&error);
+
+    g_assert_cmpuint(task1->tags->len, ==, 1);
+    g_assert_cmpstr(task1->tags->pdata[0], ==, tag);
 
     // second task
     guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
@@ -265,8 +268,10 @@ static void test_find_by_tag(void)
     g_assert_cmpuint(no_tasks_again->len, ==, 0);
     g_ptr_array_unref(no_tasks_again);
 
-    task_manager_tag_task(manager, task2_id, tag, &error);
-    g_assert_no_error(error);
+    gboolean result = task_manager_tag_task(manager, task2_id, tag, &error);
+    g_assert_false(result);
+    g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG);
+    g_clear_error(&error);
 
     GPtrArray *same_tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
     g_assert_no_error(error);
