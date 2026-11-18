@@ -13,6 +13,8 @@
 - Без глобального стану. `TaskManager` видає ID та узгоджує всі індекси.
 - `Task` у базовій версії — звичайна структура C, не GObject.
 - CLI читає команди, викликає менеджер і друкує результати та помилки.
+- Структура: `src/` (бібліотека `task_manager_core`: `task`, `task_manager`,
+  `cli`), `main.c` (застосунок), `tests/` (g_test), `docs/` (вимоги PDF).
 - GObject, GMainLoop і робочий потік — окремий навчальний етап. Додавай
   їх лише за потреби.
 
@@ -115,34 +117,97 @@
 - Ще не визначено: граничні ID (переповнення `guint`).
   Не видавай нові рішення за вже погоджені.
 
-## Збірка та тести
+## Збірка
 
-```sh
-make          # усі три тестові програми
-make test     # збірка за потреби та запуск усіх програм
-make -B test  # примусова перебудова та запуск
+Система збірки — CMake з пресетами (`CMakeLists.txt`, `CMakePresets.json`);
+Makefile прибрано. Стиль запозичено з проєкту mcu_communicator
+(`CLAUDE_REFERENCE.md` — лише довідка, не опис цього проєкту).
+
+```bash
+sudo apt install cmake pkg-config libglib2.0-dev clang-format valgrind
 ```
 
-Параметри: `-Wall -Wextra -Werror`, `-Isrc`, GLib через `pkg-config`.
-`tests/test_task.c`, `tests/test_task_manager.c` та `tests/test_cli.c`
-мають окремі `main()` і збираються в окремі файли. Не компонувати їх
-разом. Зараз Makefile не збирає консольний застосунок із `main.c`.
+```bash
+cmake --preset debug                      # configure: ASan + UBSan
+cmake --build --preset debug -- -j$(nproc)
+ctest --preset debug                      # усі тести
+```
+
+Каталоги збірки лежать поруч із репозиторієм:
+`../task-manager-cli-<preset>/out/bin/` (застосунок `task_manager` і три
+тестові програми). У репозиторії збірок немає.
+
+| Пресет | Що | Навіщо |
+| --- | --- | --- |
+| `debug` | `Debug`, `ENABLE_ASAN=ON` (ASan + UBSan) | щоденна розробка; витік чи UB валить тест |
+| `release` | `RelWithDebInfo`, без санітайзерів | valgrind (не поєднується з ASan) |
+
+`autobuild.sh` обгортає ці команди:
+
+```bash
+./autobuild.sh                    # build debug (configure за потреби)
+./autobuild.sh configure|build|test|clean [debug|release]
+./autobuild.sh valgrind           # усі тести під valgrind (release)
+./autobuild.sh format             # clang-format -i для всіх *.c/*.h
+./autobuild.sh format-check       # перевірка без змін; код 1 при порушеннях
+```
+
+Параметри CMake: C11 з GNU-розширеннями (потрібні для `g_autoptr`),
+`-Wall -Wextra -Werror`, GLib >= 2.56 через `pkg_check_modules`.
+Бібліотека `task_manager_core` (`src/*.c`) лінкується до застосунку та
+тестів. Кожен файл `tests/*.c` має власний `main()` і є окремим
+виконуваним файлом та окремим тестом CTest; не компонувати їх разом.
+Новий вихідний файл додавай у `task_manager_core`, нову тестову
+програму — у список `foreach` у `CMakeLists.txt`.
+
+## Стиль коду
+
+- Правила — `.clang-format` (база Google, змінена; з mcu_communicator).
+- Ширина рядка 140, відступ 4 пробіли без табуляцій.
+- Дужки: `BreakBeforeBraces: Mozilla` — для функцій і `struct`/`enum`
+  `{` на новому рядку, для `if`/`for`/`while`/`switch` на тому ж рядку.
+- `PointerAlignment: Left` (`Task* task`), але в конфігурації ввімкнено
+  `DerivePointerAlignment: true`: clang-format бере переважний стиль файлу,
+  тож наявний `Task *task` лишиться. Для справжнього Left треба вимкнути
+  Derive — це окреме рішення.
+- `case` з відступом усередині `switch`; `SortIncludes: false`.
+- Перед комітом: `./autobuild.sh format-check`; виправлення —
+  `./autobuild.sh format`. Масове переформатування робити окремим
+  комітом, не змішуючи з логікою.
+
+## Тести
+
+- Фреймворк — GLib `g_test_*` (вимога PDF). У mcu_communicator — CMocka;
+  на нього не переходити без окремого рішення.
+- Пам'ять: `debug` ловить витоки через ASan/LSan (тест падає з ненульовим
+  кодом); `./autobuild.sh valgrind` перевіряє `release`-збірку.
+- Окремий тест: `../task-manager-cli-debug/out/bin/test_cli -p /cli/add`.
+
+### Покриття
 
 Тести додаються разом із поведінкою. PDF вимагає сценаріїв: додавання та
 пошук за ID; пошук за тегом після untag; порядок top при рівних
 пріоритетах; del задачі в черзі; витіснення першої з 11 команд історії.
 Усі п'ять покрито (історія — у `test_task_manager`). Через публічний API
 порядок за `created_at` не відрізнити від порядку за ID: обидва ростуть
-разом. Зараз тестів: 2 у `test_task`, 16 у `test_task_manager`, 13 у
+разом. Зараз тестів: 2 у `test_task`, 16 у `test_task_manager`, 19 у
 `test_cli`.
-Перед кожною здачею запускай `make -B test`, перевіряй код виходу та
-`valgrind --leak-check=full` для кожної з трьох програм (або ASan).
-Не фільтруй вивід `make` через `grep`: це ховає падіння тестів.
+Перед кожною здачею: `./autobuild.sh test` (debug з ASan),
+`./autobuild.sh valgrind` і `./autobuild.sh format-check`; перевіряй код
+виходу. Не фільтруй вивід збірки чи тестів через `grep`: це ховає падіння.
 
-Статус CLI: реалізовані `add`, `del`, `tag`, `untag`, `enqueue`, `find`
-(з тестами). Залишаються обробники `top`, `run`, `history`, `stats`,
-`main.c` (читання stdin, друк результатів і помилок, ціль у Makefile),
-перевірка витоків для застосунку та оновлення README.
+Статус: базова версія за PDF завершена — бібліотека, усі команди CLI,
+застосунок `task_manager`. README ще описує Makefile; оновлюється
+окремо (разом із переходом на новий кодстайл).
+
+## Git
+
+- Гілки: `feature/<name>`, `bugfix/<name>`, `improvement/<name>`,
+  `refactoring/<name>` (у mcu_communicator замість `<name>` — тікет).
+- Повідомлення комітів: `Added: ...`, `Fixed: ...` (як в історії
+  репозиторію). Формат `TICKET-ID: [module] ...` з mcu_communicator тут не
+  застосовується, бо тікетів немає.
+- Не комітити секрети, паролі, ключі та внутрішні дані інших проєктів.
 
 ## Передача контексту
 

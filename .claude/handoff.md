@@ -17,15 +17,15 @@ README.md у корені.
 
 Спочатку прочитай CLAUDE.md, .claude/rules/mentoring.md,
 .claude/handoff.md та docs/glib-containers-task.pdf.
-Переглянь фактичні файли src/, tests/, Makefile і main.c.
+Переглянь фактичні файли src/, tests/, CMakeLists.txt і main.c.
 
-Проведи рев’ю поточної реалізації: make -B test (перевір код виходу, не
-фільтруй вивід), valgrind --leak-check=full для кожної тестової програми
-та, за потреби, ASan. Спочатку поведінка, володіння пам’яттю, GError та
-зміст тестів. Для кожної проблеми — файл/рядок, сценарій і пояснення.
-Файли не змінюй.
+Проведи рев’ю поточної реалізації: ./autobuild.sh test (ASan),
+./autobuild.sh valgrind і ./autobuild.sh format-check; перевір код
+виходу, не фільтруй вивід. Спочатку поведінка, володіння пам’яттю,
+GError та зміст тестів. Для кожної проблеми — файл/рядок, сценарій і
+пояснення. Файли не змінюй.
 
-Якщо суттєвих проблем немає, продовжуй CLI-обробниками (див. «Далі»):
+Якщо суттєвих проблем немає, продовжуй за розділом «Далі»:
 дай одне посильне завдання.
 ```
 
@@ -42,11 +42,15 @@ README.md у корені.
   `untag_task`, `find_tasks_by_tag`, `top_tasks`, `enqueue_task`,
   `run_next`, `record_command`, `get_history`, `get_stats`,
   `is_valid_tag`. Спільне видалення — приватна `task_manager_remove_task()`.
-- CLI (`src/cli.*`): `cli_execute_line()`, таблиця `commands[]`. Є
-  `add`, `del`, `tag`, `untag`, `enqueue`, `find` і `quit`.
-- Тести: 2 у `test_task`, 16 у `test_task_manager`, 13 у `test_cli`;
-  усі проходять. Останнє перевірене valgrind: 0 втрачених байтів.
-- Makefile збирає три тестові програми. `main.c` — заглушка.
+- CLI (`src/cli.*`): `cli_execute_line()`, таблиця `commands[]`, усі
+  11 команд PDF. `main.c` читає stdin через `GIOChannel`.
+- Тести: 2 у `test_task`, 16 у `test_task_manager`, 19 у `test_cli`;
+  усі проходять під ASan і valgrind (2026-11-18).
+- Збірка: CMake з пресетами `debug` (ASan) і `release`, каталоги
+  `../task-manager-cli-<preset>/out/bin`; обгортка `autobuild.sh`
+  (configure/build/test/valgrind/clean/format/format-check). Makefile
+  прибрано. `.clang-format` взято з mcu_communicator; формат ще не
+  застосовано до коду.
 
 ## Прийняті рішення, які легко забути
 
@@ -71,15 +75,10 @@ README.md у корені.
 
 ## Далі
 
-- CLI-обробники `top <n>`, `run`, `history`, `stats` (кожен із тестами).
-  Формат виводу `run`: `running: <title> (id <id>, priority <p>)`; копію
-  задачі звільняти через `task_free()`; порожня черга — `queue is empty`.
-- `main.c`: читання stdin, виклик `cli_execute_line()`, друк `output` через
-  `g_print`, помилок — через `g_printerr("error: %s\n", ...)`; ціль у
-  Makefile.
-- Застосунок `build/task_manager` готовий, valgrind чистий. README
-  оновлюється разом із переходом на CMake та новим кодстайлом.
 - Вимоги PDF закрито, включно з дубльованим тегом (2026-11-18).
+- Застосувати `.clang-format` до коду окремим комітом (після рішення щодо
+  `DerivePointerAlignment`), потім тримати `format-check` зеленим.
+- Оновити README: CMake, `autobuild.sh`, запуск застосунку, приклад сесії.
 - Після робочої базової версії: GObject, GMainLoop, робочий потік і
   окреме рішення, хто утримує `Task` живим до завершення виконання.
 
