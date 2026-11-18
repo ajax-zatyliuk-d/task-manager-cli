@@ -2,7 +2,8 @@
 
 #define CMD_HISTORY_LEN 10
 
-struct _TaskManager {
+struct _TaskManager
+{
     GHashTable *tasks_by_id;
     GHashTable *tasks_by_tag;
     GHashTable *unique_tags;
@@ -12,20 +13,14 @@ struct _TaskManager {
     guint next_id;
 };
 
-static void task_destroy(gpointer task)
-{
-    task_free(task);
-}
+static void task_destroy(gpointer task) { task_free(task); }
 
-static void tasks_array_destroy(gpointer ptr)
-{
-    g_ptr_array_free(ptr, TRUE);
-}
+static void tasks_array_destroy(gpointer ptr) { g_ptr_array_free(ptr, TRUE); }
 
 static Task *task_manager_task_lookup(GHashTable *tasks_by_id, guint id, GError **error)
 {
     Task *task = g_hash_table_lookup(tasks_by_id, GUINT_TO_POINTER(id));
-    
+
     if (task == NULL) {
         g_set_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND, "task %u not found", id);
     }
@@ -40,12 +35,13 @@ static gboolean validate_tag(const gchar *tag, GError **error)
 
         return FALSE;
     }
-    
+
     for (const gchar *p = tag; *p != '\0'; ++p) {
         gchar c = *p;
 
         if (!(g_ascii_isdigit(c) || g_ascii_islower(c) || c == '_')) {
-            g_set_error_literal(error, TM_ERROR, TM_ERROR_INVALID_TAG, "tag must contain only lowercase ASCII letters, digits, or underscores");
+            g_set_error_literal(
+                error, TM_ERROR, TM_ERROR_INVALID_TAG, "tag must contain only lowercase ASCII letters, digits, or underscores");
 
             return FALSE;
         }
@@ -79,7 +75,7 @@ static void task_manager_remove_task_from_tag(TaskManager *manager, Task *task, 
 {
     GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
     g_assert_nonnull(tasks);
-    
+
     guint index = 0;
     gboolean found = g_ptr_array_find(tasks, task, &index);
     g_assert_true(found);
@@ -94,7 +90,7 @@ static void task_manager_remove_task_from_tag(TaskManager *manager, Task *task, 
 
 static gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
 {
-    (void)user_data; // unused data
+    (void)user_data;  // unused data
     const Task *first = a;
     const Task *second = b;
 
@@ -137,10 +133,7 @@ static void task_manager_remove_task(TaskManager *manager, Task *task)
     g_hash_table_remove(manager->tasks_by_id, GUINT_TO_POINTER(task->id));
 }
 
-GQuark task_manager_error_quark(void)
-{
-    return g_quark_from_static_string("task-manager-error-quark");
-}
+GQuark task_manager_error_quark(void) { return g_quark_from_static_string("task-manager-error-quark"); }
 
 TaskManager *task_manager_new(void)
 {
@@ -154,7 +147,7 @@ TaskManager *task_manager_new(void)
     manager->next_id = 1;
 
     return manager;
-}    
+}
 
 void task_manager_free(TaskManager *manager)
 {
@@ -168,7 +161,7 @@ void task_manager_free(TaskManager *manager)
     g_hash_table_destroy(manager->tasks_by_id);
     g_queue_free(manager->run_queue);
     g_queue_free_full(manager->command_history, g_free);
-    
+
     g_free(manager);
 }
 
@@ -272,9 +265,8 @@ gboolean task_manager_delete_task(TaskManager *manager, guint id, GError **error
 GPtrArray *task_manager_top_tasks(TaskManager *manager, guint n)
 {
     GPtrArray *tasks = g_ptr_array_new();
-    for (GSequenceIter *it = g_sequence_get_begin_iter(manager->tasks_sorted);
-         tasks->len < n && !g_sequence_iter_is_end(it);
-         it = g_sequence_iter_next(it)) {
+    for (GSequenceIter *it = g_sequence_get_begin_iter(manager->tasks_sorted); tasks->len < n && !g_sequence_iter_is_end(it);
+        it = g_sequence_iter_next(it)) {
         g_ptr_array_add(tasks, g_sequence_get(it));
     }
 
@@ -310,7 +302,7 @@ void task_manager_record_command(TaskManager *manager, const gchar *command)
     if (command == NULL || command[0] == '\0') {
         return;
     }
-    
+
     g_queue_push_tail(manager->command_history, g_strdup(command));
 
     if (g_queue_get_length(manager->command_history) <= CMD_HISTORY_LEN) {
@@ -344,7 +336,4 @@ TaskManagerStats task_manager_get_stats(TaskManager *manager)
     return stats;
 }
 
-gboolean task_manager_is_valid_tag(const gchar *tag, GError **error)
-{
-    return validate_tag(tag, error);
-}
+gboolean task_manager_is_valid_tag(const gchar *tag, GError **error) { return validate_tag(tag, error); }

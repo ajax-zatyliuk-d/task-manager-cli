@@ -6,14 +6,16 @@ typedef struct _TaskManager TaskManager;
 typedef struct _TaskManagerStats TaskManagerStats;
 typedef enum _TaskManagerError TaskManagerError;
 
-enum _TaskManagerError {
+enum _TaskManagerError
+{
     TM_ERROR_INVALID_PRIORITY,
     TM_ERROR_TASK_NOT_FOUND,
     TM_ERROR_INVALID_TAG,
     TM_ERROR_DUPLICATE_TAG,
 };
 
-struct _TaskManagerStats {
+struct _TaskManagerStats
+{
     guint tasks;
     guint unique_tags;
     guint queue_length;
