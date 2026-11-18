@@ -3,7 +3,8 @@
 #include <glib.h>
 
 typedef struct _Task Task;
-struct _Task {
+struct _Task
+{
     guint id;
     gchar *title;
     gint priority;
