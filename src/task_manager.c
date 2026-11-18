@@ -27,7 +27,7 @@ static Task *task_manager_task_lookup(GHashTable *tasks_by_id, guint id, GError 
     Task *task = g_hash_table_lookup(tasks_by_id, GUINT_TO_POINTER(id));
     
     if (task == NULL) {
-        g_set_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND, "Task Manager Error: not found");
+        g_set_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND, "task %u not found", id);
     }
 
     return task;
@@ -36,7 +36,7 @@ static Task *task_manager_task_lookup(GHashTable *tasks_by_id, guint id, GError 
 static gboolean validate_tag(const gchar *tag, GError **error)
 {
     if (tag == NULL || *tag == '\0') {
-        g_set_error_literal(error, TM_ERROR, TM_ERROR_INVALID_TAG, "Tag must not be empty");
+        g_set_error_literal(error, TM_ERROR, TM_ERROR_INVALID_TAG, "tag must not be empty");
 
         return FALSE;
     }
@@ -45,7 +45,7 @@ static gboolean validate_tag(const gchar *tag, GError **error)
         gchar c = *p;
 
         if (!(g_ascii_isdigit(c) || g_ascii_islower(c) || c == '_')) {
-            g_set_error_literal(error, TM_ERROR, TM_ERROR_INVALID_TAG, "Tag must contain only lowercase ASCII letters, digits, or underscores");
+            g_set_error_literal(error, TM_ERROR, TM_ERROR_INVALID_TAG, "tag must contain only lowercase ASCII letters, digits, or underscores");
 
             return FALSE;
         }
@@ -175,7 +175,7 @@ void task_manager_free(TaskManager *manager)
 guint task_manager_add_task(TaskManager *manager, const gchar *title, gint priority, GError **error)
 {
     if (priority > 10 || priority < 1) {
-        g_set_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY, "Priority must be between 1 and 10, got %d", priority);
+        g_set_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY, "priority must be between 1 and 10, got %d", priority);
         return 0;
     }
 
