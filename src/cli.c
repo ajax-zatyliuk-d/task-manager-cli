@@ -55,7 +55,7 @@ static gboolean cmd_add(TaskManager *manager, gchar **args, GString *output, GEr
     // validate args
     gint64 priority;
     if (args[0] == NULL || !g_ascii_string_to_signed(args[0], 10, G_MININT, G_MAXINT, &priority, NULL)) {
-        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "expected an integer priority");
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: add <priority> <title> [#tag ...]");
         return FALSE;
     }
 
