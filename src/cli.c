@@ -4,7 +4,7 @@
 #include "task.h"
 
 typedef struct _CliCommand CliCommand;
-typedef gboolean (*CliHandler)(TaskManager *, gchar **, GString *, GError **);
+typedef gboolean (*CliHandler)(TaskManager *, gchar *const *, GString *, GError **);
 
 struct _CliCommand
 {
@@ -25,14 +25,14 @@ static gboolean parse_id(const gchar *word, guint *id, GError **error)
     return TRUE;
 }
 
-static gboolean validate_add_tags(gchar **first_tag, GError **error)
+static gboolean validate_add_tags(gchar *const *first_tag, GError **error)
 {
     if (*first_tag == NULL) {
         return TRUE;
     }
 
     g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
-    for (gchar **word = first_tag; *word != NULL; ++word) {
+    for (gchar *const *word = first_tag; *word != NULL; ++word) {
         if ((*word)[0] != '#') {
             g_set_error(error, CLI_ERROR, CLI_ERROR_USAGE, "expected a tag, got: %s", *word);
             return FALSE;
@@ -53,7 +53,7 @@ static gboolean validate_add_tags(gchar **first_tag, GError **error)
 }
 
 // add <priority> <title> [#tag1 #tag2 ...]
-static gboolean cmd_add(TaskManager *manager, gchar **args, GString *output, GError **error)
+static gboolean cmd_add(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     // validate args
     gint64 priority;
@@ -62,8 +62,8 @@ static gboolean cmd_add(TaskManager *manager, gchar **args, GString *output, GEr
         return FALSE;
     }
 
-    gchar **title_words = args + 1;
-    gchar **first_tag = title_words;
+    gchar *const *const title_words = args + 1;
+    gchar *const *first_tag = title_words;
 
     while (*first_tag != NULL && (*first_tag)[0] != '#') {
         ++first_tag;
@@ -80,7 +80,7 @@ static gboolean cmd_add(TaskManager *manager, gchar **args, GString *output, GEr
 
     GString *title = g_string_new(NULL);
 
-    for (gchar **word = title_words; word != first_tag; ++word) {
+    for (gchar *const *word = title_words; word != first_tag; ++word) {
         if (word != title_words) {
             g_string_append_c(title, ' ');
         }
@@ -88,14 +88,14 @@ static gboolean cmd_add(TaskManager *manager, gchar **args, GString *output, GEr
     }
 
     // add task
-    guint task_id = task_manager_add_task(manager, title->str, (gint)priority, error);
+    const guint task_id = task_manager_add_task(manager, title->str, (gint)priority, error);
     g_string_free(title, TRUE);
 
     if (task_id == 0) {
         return FALSE;
     }
 
-    for (gchar **tag = first_tag; *tag != NULL; ++tag) {
+    for (gchar *const *tag = first_tag; *tag != NULL; ++tag) {
         if (!task_manager_tag_task(manager, task_id, *tag + 1, error)) {
             task_manager_delete_task(manager, task_id, NULL);
             return FALSE;
@@ -106,7 +106,7 @@ static gboolean cmd_add(TaskManager *manager, gchar **args, GString *output, GEr
     return TRUE;
 }
 
-static gboolean cmd_del(TaskManager *manager, gchar **args, GString *output, GError **error)
+static gboolean cmd_del(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: del <id>");
@@ -126,7 +126,7 @@ static gboolean cmd_del(TaskManager *manager, gchar **args, GString *output, GEr
     return TRUE;
 }
 
-static gboolean cmd_tag(TaskManager *manager, gchar **args, GString *output, GError **error)
+static gboolean cmd_tag(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] == NULL || args[2] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: tag <id> <#tag>");
@@ -152,7 +152,7 @@ static gboolean cmd_tag(TaskManager *manager, gchar **args, GString *output, GEr
     return TRUE;
 }
 
-static gboolean cmd_untag(TaskManager *manager, gchar **args, GString *output, GError **error)
+static gboolean cmd_untag(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] == NULL || args[2] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: untag <id> <#tag>");
@@ -178,7 +178,7 @@ static gboolean cmd_untag(TaskManager *manager, gchar **args, GString *output, G
     return TRUE;
 }
 
-static gboolean cmd_enqueue(TaskManager *manager, gchar **args, GString *output, GError **error)
+static gboolean cmd_enqueue(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: enqueue <id>");
@@ -198,7 +198,7 @@ static gboolean cmd_enqueue(TaskManager *manager, gchar **args, GString *output,
     return TRUE;
 }
 
-static gboolean cmd_find(TaskManager *manager, gchar **args, GString *output, GError **error)
+static gboolean cmd_find(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] != NULL || args[0][0] != '#') {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: find <#tag>");
@@ -219,7 +219,7 @@ static gboolean cmd_find(TaskManager *manager, gchar **args, GString *output, GE
     return TRUE;
 }
 
-static gboolean cmd_top(TaskManager *manager, gchar **args, GString *output, GError **error)
+static gboolean cmd_top(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: top <n>");
@@ -242,7 +242,7 @@ static gboolean cmd_top(TaskManager *manager, gchar **args, GString *output, GEr
     return TRUE;
 }
 
-static gboolean cmd_run(TaskManager *manager, gchar **args, GString *output, GError **error)
+static gboolean cmd_run(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: run");
@@ -261,7 +261,7 @@ static gboolean cmd_run(TaskManager *manager, gchar **args, GString *output, GEr
     return TRUE;
 }
 
-static gboolean cmd_history(TaskManager *manager, gchar **args, GString *output, GError **error)
+static gboolean cmd_history(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: history");
@@ -270,21 +270,22 @@ static gboolean cmd_history(TaskManager *manager, gchar **args, GString *output,
 
     GPtrArray *history = task_manager_get_history(manager);
     for (guint i = 0; i < history->len; ++i) {
-        g_string_append_printf(output, "%s\n", (gchar *)g_ptr_array_index(history, i));
+        const gchar *command = g_ptr_array_index(history, i);
+        g_string_append_printf(output, "%s\n", command);
     }
 
     g_ptr_array_unref(history);
     return TRUE;
 }
 
-static gboolean cmd_stats(TaskManager *manager, gchar **args, GString *output, GError **error)
+static gboolean cmd_stats(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: stats");
         return FALSE;
     }
 
-    TaskManagerStats stats = task_manager_get_stats(manager);
+    const TaskManagerStats stats = task_manager_get_stats(manager);
     g_string_append_printf(output, "tasks: %u\ntags: %u\nqueue: %u\n", stats.tasks, stats.unique_tags, stats.queue_length);
 
     return TRUE;

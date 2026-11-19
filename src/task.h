@@ -14,6 +14,6 @@ struct _Task
 
 Task *task_new(guint id, const gchar *title, gint priority);
 void task_free(Task *task);
-gboolean task_is_tag_existed(Task *task, const gchar *tag);
+gboolean task_is_tag_existed(const Task *task, const gchar *tag);
 void task_add_tag(Task *task, const gchar *tag);
 void task_remove_tag(Task *task, const gchar *tag);

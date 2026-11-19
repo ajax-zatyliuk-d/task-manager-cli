@@ -33,7 +33,7 @@ void task_manager_free(TaskManager *manager);
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(TaskManager, task_manager_free);
 
 guint task_manager_add_task(TaskManager *manager, const gchar *title, gint priority, GError **error);
-const Task *task_manager_find_task_by_id(TaskManager *manager, guint id, GError **error);
+const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error);
 gboolean task_manager_delete_task(TaskManager *manager, guint id, GError **error);
 
 // Adds a non-empty tag containing only [a-z0-9_] and returns TRUE.
@@ -46,7 +46,7 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
 // invalid tag: NULL and TM_ERROR_INVALID_TAG
 // the caller releases the array with g_ptr_array_unref()
 // task pointers remain valid until their tasks are deleted
-GPtrArray *task_manager_find_tasks_by_tag(TaskManager *manager, const gchar *tag, GError **error);
+GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag, GError **error);
 
 // snake_case like tag and is not empty
 // return TRUE if tag is valid and ID is existed and FALSE if get some error
@@ -56,7 +56,7 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
 // caller is owner of new GPtrArray of tasks (Task *task)
 // n == 0 return empty array
 // n > length return all tasks
-GPtrArray *task_manager_top_tasks(TaskManager *manager, guint n);
+GPtrArray *task_manager_top_tasks(const TaskManager *manager, guint n);
 
 gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **error);
 
@@ -67,5 +67,5 @@ Task *task_manager_run_next(TaskManager *manager);
 
 void task_manager_record_command(TaskManager *manager, const gchar *command);
 GPtrArray *task_manager_get_history(const TaskManager *manager);
-TaskManagerStats task_manager_get_stats(TaskManager *manager);
+TaskManagerStats task_manager_get_stats(const TaskManager *manager);
 gboolean task_manager_is_valid_tag(const gchar *tag, GError **error);

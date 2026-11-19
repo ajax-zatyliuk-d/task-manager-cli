@@ -14,12 +14,12 @@ int main(void)
     while (TRUE) {
         g_autofree gchar *line = NULL;
         g_autoptr(GError) error = NULL;
-        GIOStatus read_status = g_io_channel_read_line(channel, &line, NULL, NULL, &error);
+        const GIOStatus read_status = g_io_channel_read_line(channel, &line, NULL, NULL, &error);
 
         switch (read_status) {
             case G_IO_STATUS_NORMAL: {
                 g_string_truncate(output, 0);
-                CliStatus cli_status = cli_execute_line(manager, line, output, &error);
+                const CliStatus cli_status = cli_execute_line(manager, line, output, &error);
 
                 g_print("%s", output->str);
 

@@ -39,7 +39,7 @@ static gboolean validate_tag(const gchar *tag, GError **error)
     }
 
     for (const gchar *p = tag; *p != '\0'; ++p) {
-        gchar c = *p;
+        const gchar c = *p;
 
         if (!(g_ascii_isdigit(c) || g_ascii_islower(c) || c == '_')) {
             g_set_error_literal(
@@ -73,13 +73,13 @@ static void task_manager_unique_tags_add(GHashTable *unique_tags, const gchar *t
     g_hash_table_add(unique_tags, g_strdup(tag));
 }
 
-static void task_manager_remove_task_from_tag(TaskManager *manager, Task *task, const gchar *tag)
+static void task_manager_remove_task_from_tag(TaskManager *manager, const Task *task, const gchar *tag)
 {
     GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
     g_assert_nonnull(tasks);
 
     guint index = 0;
-    gboolean found = g_ptr_array_find(tasks, task, &index);
+    const gboolean found = g_ptr_array_find(tasks, task, &index);
     g_assert_true(found);
 
     g_ptr_array_remove_index(tasks, index);
@@ -173,7 +173,7 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
         return 0;
     }
 
-    guint task_id = manager->next_id;
+    const guint task_id = manager->next_id;
     Task *task = task_new(task_id, title, priority);
     g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(task_id), task);
     g_sequence_insert_sorted(manager->tasks_sorted, task, compare_tasks, NULL);
@@ -183,7 +183,7 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
     return task->id;
 }
 
-const Task *task_manager_find_task_by_id(TaskManager *manager, guint id, GError **error)
+const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error)
 {
     return task_manager_task_lookup(manager->tasks_by_id, id, error);
 }
@@ -211,14 +211,14 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
     return TRUE;
 }
 
-GPtrArray *task_manager_find_tasks_by_tag(TaskManager *manager, const gchar *tag, GError **error)
+GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag, GError **error)
 {
     if (!validate_tag(tag, error)) {
         return NULL;
     }
 
     GPtrArray *matches = g_ptr_array_new();
-    GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
+    const GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
 
     if (tasks == NULL) {
         return matches;
@@ -267,7 +267,7 @@ gboolean task_manager_delete_task(TaskManager *manager, guint id, GError **error
     return TRUE;
 }
 
-GPtrArray *task_manager_top_tasks(TaskManager *manager, guint n)
+GPtrArray *task_manager_top_tasks(const TaskManager *manager, guint n)
 {
     GPtrArray *tasks = g_ptr_array_new();
     for (GSequenceIter *it = g_sequence_get_begin_iter(manager->tasks_sorted); tasks->len < n && !g_sequence_iter_is_end(it);
@@ -332,13 +332,13 @@ GPtrArray *task_manager_get_history(const TaskManager * manager)
     return history;
 }
 
-TaskManagerStats task_manager_get_stats(TaskManager *manager)
+TaskManagerStats task_manager_get_stats(const TaskManager *manager)
 {
-    TaskManagerStats stats = {0};
-
-    stats.tasks = g_hash_table_size(manager->tasks_by_id);
-    stats.unique_tags = g_hash_table_size(manager->unique_tags);
-    stats.queue_length = g_queue_get_length(manager->run_queue);
+    const TaskManagerStats stats = {
+        .tasks = g_hash_table_size(manager->tasks_by_id),
+        .unique_tags = g_hash_table_size(manager->unique_tags),
+        .queue_length = g_queue_get_length(manager->run_queue),
+    };
 
     return stats;
 }
