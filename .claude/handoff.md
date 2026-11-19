@@ -32,7 +32,7 @@ GError та зміст тестів. Для кожної проблеми — ф
 ## Що реалізовано
 
 - `Task` (`src/task.*`): `task_new`, `task_free`, `task_copy` (глибока
-  копія з тегами та `created_at`), `task_is_tag_existed`, `task_tags_add`,
+  копія з тегами та `created_at`), `task_is_tag_existed`, `task_add_tag`,
   `task_remove_tag`.
 - `TaskManager` (`src/task_manager.*`): `tasks_by_id`, `tasks_by_tag`
   (`GPtrArray` з позиченими `Task *`), `unique_tags`, `tasks_sorted`

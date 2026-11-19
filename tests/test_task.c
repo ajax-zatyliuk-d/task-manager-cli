@@ -31,8 +31,8 @@ static void test_task_copy(void)
     gint priority = 5;
 
     Task *task = task_new(id, title, priority);
-    task_tags_add(task, tag1);
-    task_tags_add(task, tag2);
+    task_add_tag(task, tag1);
+    task_add_tag(task, tag2);
 
     Task *copy = task_copy(task);
 
