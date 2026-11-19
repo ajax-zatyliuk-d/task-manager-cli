@@ -58,9 +58,9 @@ GPtrArray *task_manager_top_tasks(TaskManager *manager, guint n);
 
 gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **error);
 
-// return new copy of Task
-// caller need to free resources -> call task_free(task);
-// NULL mean empty queue
+// Removes the next task from the manager and transfers ownership to the caller.
+// The caller must free the returned task with task_free().
+// Returns NULL if the run queue is empty.
 Task *task_manager_run_next(TaskManager *manager);
 
 void task_manager_record_command(TaskManager *manager, const gchar *command);

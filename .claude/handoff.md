@@ -31,9 +31,8 @@ GError та зміст тестів. Для кожної проблеми — ф
 
 ## Що реалізовано
 
-- `Task` (`src/task.*`): `task_new`, `task_free`, `task_copy` (глибока
-  копія з тегами та `created_at`), `task_is_tag_existed`, `task_add_tag`,
-  `task_remove_tag`.
+- `Task` (`src/task.*`): `task_new`, `task_free`,
+  `task_is_tag_existed`, `task_add_tag`, `task_remove_tag`.
 - `TaskManager` (`src/task_manager.*`): `tasks_by_id`, `tasks_by_tag`
   (`GPtrArray` з позиченими `Task *`), `unique_tags`, `tasks_sorted`
   (`GSequence`), `run_queue` (`GQueue` з `Task *`), `command_history`
@@ -41,7 +40,7 @@ GError та зміст тестів. Для кожної проблеми — ф
 - Операції: `add_task`, `find_task_by_id`, `delete_task`, `tag_task`,
   `untag_task`, `find_tasks_by_tag`, `top_tasks`, `enqueue_task`,
   `run_next`, `record_command`, `get_history`, `get_stats`,
-  `is_valid_tag`. Спільне видалення — приватна `task_manager_remove_task()`.
+  `is_valid_tag`. Спільне видалення — `task_manager_delete_task()`.
 - CLI (`src/cli.*`): `cli_execute_line()`, таблиця `commands[]`, усі
   11 команд PDF. `main.c` читає stdin через `GIOChannel`.
 - Тести: 2 у `test_task`, 16 у `test_task_manager`, 19 у `test_cli`;

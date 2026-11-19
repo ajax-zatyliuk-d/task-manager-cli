@@ -34,15 +34,3 @@ void task_remove_tag(Task *task, const gchar *tag)
 
     g_ptr_array_remove_index(task->tags, index);
 }
-
-Task *task_copy(const Task *task)
-{
-    Task *new_task = task_new(task->id, task->title, task->priority);
-    new_task->created_at = task->created_at;
-
-    for (guint i = 0; i < task->tags->len; i++) {
-        g_ptr_array_add(new_task->tags, g_strdup(g_ptr_array_index(task->tags, i)));
-    }
-
-    return new_task;
-}

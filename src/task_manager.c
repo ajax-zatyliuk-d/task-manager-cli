@@ -118,7 +118,7 @@ static gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
     return 0;
 }
 
-static void task_manager_remove_task(TaskManager *manager, Task *task)
+static void task_manager_unindex_task(TaskManager *manager, Task *task)
 {
     for (guint i = 0; i < task->tags->len; ++i) {
         const gchar *tag = g_ptr_array_index(task->tags, i);
@@ -130,7 +130,6 @@ static void task_manager_remove_task(TaskManager *manager, Task *task)
     g_sequence_remove(it);
 
     g_queue_remove_all(manager->run_queue, task);
-    g_hash_table_remove(manager->tasks_by_id, GUINT_TO_POINTER(task->id));
 }
 
 GQuark task_manager_error_quark(void) { return g_quark_from_static_string("task-manager-error-quark"); }
@@ -258,7 +257,11 @@ gboolean task_manager_delete_task(TaskManager *manager, guint id, GError **error
         return FALSE;
     }
 
-    task_manager_remove_task(manager, task);
+    task_manager_unindex_task(manager, task);
+
+    // free task original memory
+    g_hash_table_remove(manager->tasks_by_id, GUINT_TO_POINTER(task->id));
+
     return TRUE;
 }
 
@@ -291,10 +294,12 @@ Task *task_manager_run_next(TaskManager *manager)
     }
 
     Task *task = g_queue_pop_head(manager->run_queue);
-    Task *copy = task_copy(task);
+    task_manager_unindex_task(manager, task);
 
-    task_manager_remove_task(manager, task);
-    return copy;
+    // steal owning of *task
+    g_hash_table_steal(manager->tasks_by_id, GUINT_TO_POINTER(task->id));
+
+    return task;
 }
 
 void task_manager_record_command(TaskManager *manager, const gchar *command)
