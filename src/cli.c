@@ -209,7 +209,7 @@ static gboolean cmd_find(TaskManager *manager, gchar **args, GString *output, GE
 
     for (guint i = 0; i < tasks->len; ++i) {
         const Task *task = g_ptr_array_index(tasks, i);
-        g_string_append_printf(output, "%u %d %s\n", task->id, task->priority, task->title);
+        g_string_append_printf(output, "id: %u, priority: %d, title: %s\n", task->id, task->priority, task->title);
     }
 
     g_ptr_array_unref(tasks);
@@ -232,7 +232,7 @@ static gboolean cmd_top(TaskManager *manager, gchar **args, GString *output, GEr
     GPtrArray *tasks = task_manager_top_tasks(manager, (guint)n);
     for (guint i = 0; i < tasks->len; ++i) {
         const Task *task = g_ptr_array_index(tasks, i);
-        g_string_append_printf(output, "%u %d %s\n", task->id, task->priority, task->title);
+        g_string_append_printf(output, "id: %u, priority: %d, title: %s\n", task->id, task->priority, task->title);
     }
 
     g_ptr_array_unref(tasks);

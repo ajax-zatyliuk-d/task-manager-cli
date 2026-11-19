@@ -623,7 +623,8 @@ static void test_cli_find(void)
     status = cli_execute_line(manager, "find #work", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
-    g_assert_true(g_strcmp0(output->str, "1 5 first\n2 7 second\n") == 0 || g_strcmp0(output->str, "2 7 second\n1 5 first\n") == 0);
+    g_assert_true(g_strcmp0(output->str, "id: 1, priority: 5, title: first\nid: 2, priority: 7, title: second\n") == 0 ||
+                  g_strcmp0(output->str, "id: 2, priority: 7, title: second\nid: 1, priority: 5, title: first\n") == 0);
 
     g_string_truncate(output, 0);
 
@@ -631,7 +632,8 @@ static void test_cli_find(void)
     status = cli_execute_line(manager, "find #work", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
-    g_assert_true(g_strcmp0(output->str, "1 5 first\n2 7 second\n") == 0 || g_strcmp0(output->str, "2 7 second\n1 5 first\n") == 0);
+    g_assert_true(g_strcmp0(output->str, "id: 1, priority: 5, title: first\nid: 2, priority: 7, title: second\n") == 0 ||
+                  g_strcmp0(output->str, "id: 2, priority: 7, title: second\nid: 1, priority: 5, title: first\n") == 0);
 
     g_string_truncate(output, 0);
 
@@ -639,7 +641,7 @@ static void test_cli_find(void)
     status = cli_execute_line(manager, "find #home", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "3 3 third\n");
+    g_assert_cmpstr(output->str, ==, "id: 3, priority: 3, title: third\n");
 
     g_string_truncate(output, 0);
 
@@ -746,8 +748,8 @@ static void test_cli_top(void)
         const gchar *command;
         const gchar *expected_output;
     } cases[] = {
-        {"top 2", "2 9 high\n3 5 medium\n"},
-        {"top 10", "2 9 high\n3 5 medium\n1 3 low\n"},
+        {"top 2", "id: 2, priority: 9, title: high\nid: 3, priority: 5, title: medium\n"},
+        {"top 10", "id: 2, priority: 9, title: high\nid: 3, priority: 5, title: medium\nid: 1, priority: 3, title: low\n"},
         {"top 0", ""},
     };
 
