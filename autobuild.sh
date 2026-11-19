@@ -47,7 +47,7 @@ configure() {
     check_preset
     require_tool cmake
     echo "Configuring preset: $PRESET"
-    cmake --preset "$PRESET" || {
+    cmake --preset "$PRESET" "$@" || {
         echo -e "${RED}ERR: cmake configure failed for preset [$PRESET]${NC}"
         exit 1
     }
@@ -98,6 +98,59 @@ run_valgrind() {
         exit 1
     fi
     echo -e "${GREEN}valgrind: no errors${NC}"
+}
+
+run_lint() {
+    check_preset
+    require_tool cppcheck "On Ubuntu/Debian: sudo apt-get install cppcheck"
+    require_tool pkg-config "On Ubuntu/Debian: sudo apt-get install pkg-config"
+    require_tool include-what-you-use "On Ubuntu/Debian: sudo apt-get install iwyu"
+    require_tool iwyu_tool "On Ubuntu/Debian: sudo apt-get install iwyu"
+
+    configure -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+    local compile_db="$BUILD_DIR_PATH/compile_commands.json"
+    if [[ ! -s "$compile_db" ]]; then
+        echo -e "${RED}ERR: missing compilation database: $compile_db (use a Makefiles or Ninja generator)${NC}" >&2
+        return 1
+    fi
+
+    local iwyu_mapping="$PWD/.iwyu.imp"
+    if [[ ! -s "$iwyu_mapping" ]]; then
+        echo "ERR: $iwyu_mapping is missing or empty. Use the project mapping or a JSON array []." >&2
+        return 1
+    fi
+
+    local glib_cflags
+    local -a glib_includes
+    glib_cflags=$(pkg-config --cflags-only-I glib-2.0) || return 1
+    read -r -a glib_includes <<< "$glib_cflags"
+
+    local lint_log="$BUILD_DIR_PATH/lint.log"
+    local failed=0
+
+    if ! : > "$lint_log"; then
+        return 1
+    fi
+
+    {
+        echo "Checking C code with Cppcheck..."
+        cppcheck --project="$compile_db" "${glib_includes[@]}" \
+            -i "$PWD/tests/" \
+            --enable=style --error-exitcode=1 || failed=1
+
+        echo "Checking includes with IWYU..."
+        iwyu_tool -p "$BUILD_DIR_PATH" -- \
+            -Xiwyu "--mapping_file=$iwyu_mapping" -Xiwyu --error=1 || failed=1
+    } >> "$lint_log" 2>&1 || return 1
+
+    if [[ "$failed" -eq 0 ]]; then
+        echo "Lint passed. Log: $lint_log"
+    else
+        echo "Lint failed. Log: $lint_log" >&2
+    fi
+
+    return "$failed"
 }
 
 clean_build() {
@@ -182,6 +235,7 @@ show_help() {
     echo "  ./autobuild.sh clean [debug|release]   - Remove build directory"
     echo "  ./autobuild.sh format                  - clang-format all sources in place"
     echo "  ./autobuild.sh format-check            - Check formatting without changes (for CI)"
+    echo "  ./autobuild.sh lint [debug|release]    - Run Cppcheck and Include What You Use"
     echo "  ./autobuild.sh -h | help               - Show help"
 }
 
@@ -197,6 +251,9 @@ configure)
     ;;
 valgrind)
     run_valgrind
+    ;;
+lint)
+    run_lint
     ;;
 clean)
     clean_build

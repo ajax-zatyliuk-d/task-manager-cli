@@ -1,4 +1,7 @@
+#include <stddef.h>
+
 #include "cli.h"
+#include "task.h"
 
 typedef struct _CliCommand CliCommand;
 typedef gboolean (*CliHandler)(TaskManager *, gchar **, GString *, GError **);

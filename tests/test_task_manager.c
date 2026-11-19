@@ -1,3 +1,7 @@
+#include <glib.h>
+#include <stddef.h>
+
+#include "task.h"
 #include "task_manager.h"
 
 static void test_add_find(void)

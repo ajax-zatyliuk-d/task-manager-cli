@@ -1,4 +1,9 @@
+#include <glib.h>
+#include <stddef.h>
+
 #include "cli.h"
+#include "task.h"
+#include "task_manager.h"
 
 static void test_cli_base(void)
 {

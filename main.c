@@ -1,6 +1,9 @@
+#include <glib.h>
+#include <stddef.h>
 #include <unistd.h>
 
 #include "cli.h"
+#include "task_manager.h"
 
 int main(void)
 {

@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #include "task.h"
 
 Task *task_new(guint id, const gchar *title, gint priority)

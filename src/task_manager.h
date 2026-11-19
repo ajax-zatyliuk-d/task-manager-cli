@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glib.h>
+
 #include "task.h"
 
 typedef struct _TaskManager TaskManager;
@@ -64,6 +66,6 @@ gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **erro
 Task *task_manager_run_next(TaskManager *manager);
 
 void task_manager_record_command(TaskManager *manager, const gchar *command);
-GPtrArray *task_manager_get_history(TaskManager *manager);
+GPtrArray *task_manager_get_history(const TaskManager *manager);
 TaskManagerStats task_manager_get_stats(TaskManager *manager);
 gboolean task_manager_is_valid_tag(const gchar *tag, GError **error);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glib.h>
+
 #include "task_manager.h"
 
 typedef enum _CliStatus CliStatus;
