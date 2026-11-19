@@ -320,7 +320,7 @@ void task_manager_record_command(TaskManager *manager, const gchar *command)
     g_free(old_cmd);
 }
 
-GPtrArray *task_manager_get_history(const TaskManager * manager)
+GPtrArray *task_manager_get_history(const TaskManager *manager)
 {
     GPtrArray *history = g_ptr_array_new_with_free_func(g_free);
 
