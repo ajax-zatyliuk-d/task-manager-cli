@@ -1,12 +1,32 @@
 #include <glib.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "cli.h"
 #include "task_manager.h"
 
+static void setup_terminal(void)
+{
+    struct termios terminal;
+    if (tcgetattr(STDIN_FILENO, &terminal) != 0) {
+        return;
+    }
+
+    if ((terminal.c_lflag & ICANON) == 0) {
+        return;
+    }
+
+    terminal.c_iflag |= IUTF8;
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &terminal) != 0) {
+        perror("tcsetattr");
+    }
+}
+
 int main(void)
 {
+    setup_terminal();
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(GIOChannel) channel = g_io_channel_unix_new(STDIN_FILENO);
