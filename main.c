@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <termios.h>
+#include <locale.h>
 #include <unistd.h>
 
 #include "cli.h"
@@ -26,6 +27,7 @@ static void setup_terminal(void)
 
 int main(void)
 {
+    setlocale(LC_CTYPE, "");
     setup_terminal();
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GString) output = g_string_new(NULL);
