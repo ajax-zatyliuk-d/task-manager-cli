@@ -14,6 +14,7 @@ enum _TaskManagerError
     TM_ERROR_TASK_NOT_FOUND,
     TM_ERROR_INVALID_TAG,
     TM_ERROR_DUPLICATE_TAG,
+    TM_ERROR_ID_EXHAUSTED,
 };
 
 struct _TaskManagerStats
@@ -32,6 +33,20 @@ void task_manager_free(TaskManager *manager);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(TaskManager, task_manager_free);
 
+/**
+ * task_manager_add_task:
+ * @manager: a valid, non-NULL task manager
+ * @title: a non-NULL, NUL-terminated task title. The function copies it.
+ * @priority: the task priority, from 1 to 10 inclusive
+ * @error: return location for a #GError, or %NULL
+ *
+ * Adds a task and assigns it a unique ID within @manager.
+ * If @error is provided, it must point to %NULL on entry.
+ *
+ * Returns: the new task ID on success, or 0 on failure. An invalid
+ * priority sets %TM_ERROR_INVALID_PRIORITY. If no IDs remain,
+ * sets %TM_ERROR_ID_EXHAUSTED. Neither error adds a task.
+ */
 guint task_manager_add_task(TaskManager *manager, const gchar *title, gint priority, GError **error);
 const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error);
 gboolean task_manager_delete_task(TaskManager *manager, guint id, GError **error);

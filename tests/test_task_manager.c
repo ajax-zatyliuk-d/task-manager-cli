@@ -3,6 +3,7 @@
 
 #include "task.h"
 #include "task_manager.h"
+#include "task_manager_test.h"
 
 static void test_add_find(void)
 {
@@ -39,6 +40,40 @@ static void test_add_find(void)
     g_assert_cmpuint(task_second->id, ==, 2);
     g_assert_cmpint(task_second->priority, ==, priority_second);
     g_assert_cmpstr(task_second->title, ==, title_second);
+
+    task_manager_free(manager);
+}
+
+static void test_add_invalid(void)
+{
+    TaskManager *manager = task_manager_new();
+    g_assert_nonnull(manager);
+
+    GError *error = NULL;
+    task_manager_set_next_id_for_test(manager, G_MAXUINT - 1);
+
+    const guint last_id = task_manager_add_task(manager, "Last task", 5, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(last_id, ==, G_MAXUINT - 1);
+
+    const guint overflow_id = task_manager_add_task(manager, "Overflow", 5, &error);
+    g_assert_error(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED);
+    g_assert_cmpuint(overflow_id, ==, 0);
+    g_clear_error(&error);
+    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 1);
+
+    task_manager_set_next_id_for_test(manager, 0);
+
+    const guint zero_id = task_manager_add_task(manager, "Zero ID", 5, &error);
+    g_assert_error(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED);
+    g_assert_cmpuint(zero_id, ==, 0);
+    g_clear_error(&error);
+    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 1);
+
+    const Task *task = task_manager_find_task_by_id(manager, last_id, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(task);
+    g_assert_cmpstr(task->title, ==, "Last task");
 
     task_manager_free(manager);
 }
@@ -951,6 +986,7 @@ int main(int argc, char **argv)
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/task-manager/add-find", test_add_find);
+    g_test_add_func("/task-manager/add-invalid", test_add_invalid);
     g_test_add_func("/task-manager/invalid-priority", test_invalid_priority);
     g_test_add_func("/task-manager/not-found", test_not_found);
 

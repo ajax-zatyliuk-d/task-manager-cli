@@ -19,24 +19,26 @@ if(ENABLE_SAN)
     add_link_options(-fsanitize=address,undefined)
 endif()
 
-# library of all from src
-add_library(task_manager_core STATIC
+set(TASK_MANAGER_CORE_SOURCES
     src/task.c
     src/task_manager.c
     src/cli.c
 )
-target_include_directories(task_manager_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
-target_link_libraries(task_manager_core PUBLIC PkgConfig::GLIB)
 
-# main cli
+foreach(core_target task_manager_core task_manager_core_testing)
+    add_library(${core_target} STATIC ${TASK_MANAGER_CORE_SOURCES})
+    target_include_directories(${core_target} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    target_link_libraries(${core_target} PUBLIC PkgConfig::GLIB)
+endforeach()
+
+target_compile_definitions(task_manager_core_testing PUBLIC TASK_MANAGER_TESTING)
+
 add_executable(task_manager main.c)
 target_link_libraries(task_manager PRIVATE task_manager_core)
 
-# tests
 enable_testing()
 foreach(test_name test_task test_task_manager test_cli)
     add_executable(${test_name} tests/${test_name}.c)
-    target_link_libraries(${test_name} PRIVATE task_manager_core)
+    target_link_libraries(${test_name} PRIVATE task_manager_core_testing)
     add_test(NAME ${test_name} COMMAND ${test_name})
 endforeach()
-

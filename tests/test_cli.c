@@ -4,6 +4,7 @@
 #include "cli.h"
 #include "task.h"
 #include "task_manager.h"
+#include "task_manager_test.h"
 
 static void test_cli_base(void)
 {
@@ -190,6 +191,19 @@ static void test_cli_add_invalid(void)
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "added task 1\n");
+
+    g_string_truncate(output, 0);
+    task_manager_set_next_id_for_test(manager, G_MAXUINT);
+
+    status = cli_execute_line(manager, "add 5 overflow #new", output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_error(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED);
+    g_clear_error(&error);
+    g_assert_cmpstr(output->str, ==, "");
+
+    stats = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats.tasks, ==, 1);
+    g_assert_cmpuint(stats.unique_tags, ==, 1);
 
     g_string_free(output, TRUE);
     task_manager_free(manager);
