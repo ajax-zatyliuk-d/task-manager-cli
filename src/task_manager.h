@@ -1,8 +1,8 @@
 #pragma once
 
-#include <glib.h>
-
 #include "task.h"
+
+#include <glib.h>
 
 typedef struct _TaskManager TaskManager;
 typedef struct _TaskManagerStats TaskManagerStats;

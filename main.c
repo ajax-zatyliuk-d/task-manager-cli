@@ -1,12 +1,14 @@
-#include <glib.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <termios.h>
-#include <locale.h>
-#include <unistd.h>
-
 #include "cli.h"
 #include "task_manager.h"
+
+#include <glib.h>
+
+#include <termios.h>
+#include <unistd.h>
+
+#include <locale.h>
+#include <stddef.h>
+#include <stdio.h>
 
 static void setup_terminal(void)
 {

@@ -1,7 +1,8 @@
-#include <glib.h>
-#include <stddef.h>
-
 #include "task.h"
+
+#include <glib.h>
+
+#include <stddef.h>
 
 static void test_task_new(void)
 {

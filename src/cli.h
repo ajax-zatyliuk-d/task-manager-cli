@@ -1,8 +1,8 @@
 #pragma once
 
-#include <glib.h>
-
 #include "task_manager.h"
+
+#include <glib.h>
 
 typedef enum _CliStatus CliStatus;
 typedef enum _CliError CliError;

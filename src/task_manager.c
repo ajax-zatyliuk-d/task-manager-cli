@@ -1,7 +1,7 @@
-#include <stddef.h>
-
 #include "task_manager.h"
 #include "task_manager_test.h"
+
+#include <stddef.h>
 
 #define CMD_HISTORY_LEN 10
 
@@ -179,7 +179,7 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
         g_set_error_literal(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED, "no more task IDs available");
         return 0;
     }
-    
+
     Task *task = task_new(task_id, title, priority);
     g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(task_id), task);
     g_sequence_insert_sorted(manager->tasks_sorted, task, compare_tasks, NULL);
@@ -352,8 +352,5 @@ TaskManagerStats task_manager_get_stats(const TaskManager *manager)
 gboolean task_manager_is_valid_tag(const gchar *tag, GError **error) { return validate_tag(tag, error); }
 
 #ifdef TASK_MANAGER_TESTING
-void task_manager_set_next_id_for_test(TaskManager *manager, guint next_id)
-{
-    manager->next_id = next_id;
-}
+void task_manager_set_next_id_for_test(TaskManager *manager, guint next_id) { manager->next_id = next_id; }
 #endif
