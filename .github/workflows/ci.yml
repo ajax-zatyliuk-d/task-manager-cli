@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (${{ matrix.preset }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [debug, release]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake pkg-config libglib2.0-dev
+
+      - name: Adjust mmap randomization for ASan
+        if: matrix.preset == 'debug'
+        run: sudo sysctl -w vm.mmap_rnd_bits=28
+
+      - name: Build and test with ASan and UBSan
+        if: matrix.preset == 'debug'
+        run: bash ./autobuild.sh test debug
+
+      - name: Install Valgrind
+        if: matrix.preset == 'release'
+        run: sudo apt-get install -y --no-install-recommends valgrind
+
+      - name: Build and test under Valgrind
+        if: matrix.preset == 'release'
+        run: bash ./autobuild.sh valgrind
+
+  format:
+    name: Format check
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned clang-format
+        run: |
+          pipx install clang-format==21.1.8
+          clang-format --version
+
+      - name: Check formatting
+        run: bash ./autobuild.sh format-check
