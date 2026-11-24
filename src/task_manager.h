@@ -47,7 +47,6 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(TaskManager, task_manager_free);
  * sets %TM_ERROR_ID_EXHAUSTED. Neither error adds a task.
  */
 guint task_manager_add_task(TaskManager *manager, const gchar *title, gint priority, GError **error);
-const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error);
 gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error);
 
 // Adds a non-empty tag containing only [a-z0-9_] and returns TRUE.
@@ -55,17 +54,21 @@ gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error
 // or TM_ERROR_DUPLICATE_TAG. On failure, the task is unchanged.
 gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag, GError **error);
 
+// snake_case like tag and is not empty
+// return TRUE if tag is valid and ID is existed and FALSE if get some error
+// errors that can be added: TM_ERROR_TASK_NOT_FOUND or TM_ERROR_INVALID_TAG
+gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *tag, GError **error);
+
+gboolean task_manager_is_valid_tag(const gchar *tag, GError **error);
+
+const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error);
+
 // returns a new array of borrowed Task pointers
 // no matches: an empty array
 // invalid tag: NULL and TM_ERROR_INVALID_TAG
 // the caller releases the array with g_ptr_array_unref()
 // task pointers remain valid until their tasks are deleted
 GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag, GError **error);
-
-// snake_case like tag and is not empty
-// return TRUE if tag is valid and ID is existed and FALSE if get some error
-// errors that can be added: TM_ERROR_TASK_NOT_FOUND or TM_ERROR_INVALID_TAG
-gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *tag, GError **error);
 
 // caller is owner of new GPtrArray of tasks (Task *task)
 // n == 0 return empty array
@@ -81,5 +84,5 @@ Task *task_manager_run_next(TaskManager *manager);
 
 void task_manager_record_command(TaskManager *manager, const gchar *command);
 GPtrArray *task_manager_get_history(const TaskManager *manager);
+
 TaskManagerStats task_manager_get_stats(const TaskManager *manager);
-gboolean task_manager_is_valid_tag(const gchar *tag, GError **error);

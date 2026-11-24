@@ -277,7 +277,7 @@ GPtrArray *task_manager_top_tasks(const TaskManager *manager, guint n)
 {
     GPtrArray *tasks = g_ptr_array_new();
     for (GSequenceIter *it = g_sequence_get_begin_iter(manager->tasks_sorted); tasks->len < n && !g_sequence_iter_is_end(it);
-        it = g_sequence_iter_next(it)) {
+         it = g_sequence_iter_next(it)) {
         g_ptr_array_add(tasks, g_sequence_get(it));
     }
 
