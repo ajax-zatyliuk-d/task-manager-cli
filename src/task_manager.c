@@ -258,7 +258,7 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
     return TRUE;
 }
 
-gboolean task_manager_delete_task(TaskManager *manager, guint id, GError **error)
+gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error)
 {
     Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
     if (task == NULL) {

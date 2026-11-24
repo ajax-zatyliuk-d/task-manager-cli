@@ -40,7 +40,7 @@ GError та зміст тестів. Для кожної проблеми — ф
 - Операції: `add_task`, `find_task_by_id`, `delete_task`, `tag_task`,
   `untag_task`, `find_tasks_by_tag`, `top_tasks`, `enqueue_task`,
   `run_next`, `record_command`, `get_history`, `get_stats`,
-  `is_valid_tag`. Спільне видалення — `task_manager_delete_task()`.
+  `is_valid_tag`. Спільне видалення — `task_manager_remove_task()`.
 - CLI (`src/cli.*`): `cli_execute_line()`, таблиця `commands[]`, усі
   11 команд PDF. `main.c` читає stdin через `GIOChannel`.
 - Тести: 2 у `test_task`, 16 у `test_task_manager`, 19 у `test_cli`;

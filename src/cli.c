@@ -97,7 +97,7 @@ static gboolean cmd_add(TaskManager *manager, gchar *const *args, GString *outpu
 
     for (gchar *const *tag = first_tag; *tag != NULL; ++tag) {
         if (!task_manager_tag_task(manager, task_id, *tag + 1, error)) {
-            task_manager_delete_task(manager, task_id, NULL);
+            task_manager_remove_task(manager, task_id, NULL);
             return FALSE;
         }
     }
@@ -118,7 +118,7 @@ static gboolean cmd_del(TaskManager *manager, gchar *const *args, GString *outpu
         return FALSE;
     }
 
-    if (!task_manager_delete_task(manager, id, error)) {
+    if (!task_manager_remove_task(manager, id, error)) {
         return FALSE;
     }
 

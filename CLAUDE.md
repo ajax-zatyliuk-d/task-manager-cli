@@ -97,7 +97,7 @@
 - `task_manager_enqueue_task()`: невідомий ID — `TM_ERROR_TASK_NOT_FOUND`,
   дубль у черзі дозволений. `task_manager_run_next()` на порожній черзі
   повертає `NULL` без помилки.
-- `task_manager_delete_task()`: невідомий ID — `TM_ERROR_TASK_NOT_FOUND`.
+- `task_manager_remove_task()`: невідомий ID — `TM_ERROR_TASK_NOT_FOUND`.
 - Історія: CLI викликає `task_manager_record_command()` для кожного
   непорожнього рядка ДО виконання, також невдалих і невідомих команд.
   Не записуються `quit` і `history` (рішення користувача 2026-11-18:

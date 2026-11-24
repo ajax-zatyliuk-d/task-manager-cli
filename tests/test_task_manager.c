@@ -507,7 +507,7 @@ static void test_delete_by_valid_id(void)
     g_assert_no_error(error);
 
     // delete task with 2 tags
-    result = task_manager_delete_task(manager, task1_id, &error);
+    result = task_manager_remove_task(manager, task1_id, &error);
     g_assert_no_error(error);
     g_assert_true(result);
 
@@ -530,19 +530,19 @@ static void test_delete_by_valid_id(void)
     g_ptr_array_unref(tasks_after_delete);
 
     // delete deleted task id
-    result = task_manager_delete_task(manager, task1_id, &error);
+    result = task_manager_remove_task(manager, task1_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
     g_assert_false(result);
 
     // delete unknown task id
-    result = task_manager_delete_task(manager, 999, &error);
+    result = task_manager_remove_task(manager, 999, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
     g_assert_false(result);
 
     // delete unknown task id without error
-    result = task_manager_delete_task(manager, 999, NULL);
+    result = task_manager_remove_task(manager, 999, NULL);
     g_assert_false(result);
 
     // new_task_id != delete_task_id
@@ -826,7 +826,7 @@ static void test_run_with_delete(void)
     GPtrArray *top_tasks = NULL;
 
     // delete task1 and run next - get task2
-    result = task_manager_delete_task(manager, task1_id, &error);
+    result = task_manager_remove_task(manager, task1_id, &error);
     g_assert_no_error(error);
     g_assert_true(result);
 
@@ -973,7 +973,7 @@ static void test_stats(void)
     g_assert_cmpuint(statistics.tasks, ==, 1);
     g_assert_cmpuint(statistics.unique_tags, ==, 1);
 
-    task_manager_delete_task(manager, task2_id, &error);
+    task_manager_remove_task(manager, task2_id, &error);
     statistics = task_manager_get_stats(manager);
     g_assert_cmpuint(statistics.queue_length, ==, 0);
     g_assert_cmpuint(statistics.tasks, ==, 0);
