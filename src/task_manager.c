@@ -4,6 +4,8 @@
 #include <stddef.h>
 
 #define CMD_HISTORY_LEN 10
+#define TASK_PRIORITY_MIN 1
+#define TASK_PRIORITY_MAX 10
 
 struct _TaskManager
 {
@@ -169,8 +171,9 @@ void task_manager_free(TaskManager *manager)
 
 guint task_manager_add_task(TaskManager *manager, const gchar *title, gint priority, GError **error)
 {
-    if (priority > 10 || priority < 1) {
-        g_set_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY, "priority must be between 1 and 10, got %d", priority);
+    if (priority < TASK_PRIORITY_MIN || priority > TASK_PRIORITY_MAX) {
+        g_set_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY, "priority must be between %d and %d, got %d", TASK_PRIORITY_MIN,
+            TASK_PRIORITY_MAX, priority);
         return 0;
     }
 
