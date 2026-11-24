@@ -189,9 +189,19 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
     return task->id;
 }
 
-const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error)
+gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error)
 {
-    return task_manager_task_lookup(manager->tasks_by_id, id, error);
+    Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
+    if (task == NULL) {
+        return FALSE;
+    }
+
+    task_manager_unindex_task(manager, task);
+
+    // free task original memory
+    g_hash_table_remove(manager->tasks_by_id, GUINT_TO_POINTER(task->id));
+
+    return TRUE;
 }
 
 gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag, GError **error)
@@ -217,26 +227,6 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
     return TRUE;
 }
 
-GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag, GError **error)
-{
-    if (!validate_tag(tag, error)) {
-        return NULL;
-    }
-
-    GPtrArray *matches = g_ptr_array_new();
-    const GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
-
-    if (tasks == NULL) {
-        return matches;
-    }
-
-    for (guint i = 0; i < tasks->len; ++i) {
-        g_ptr_array_add(matches, g_ptr_array_index(tasks, i));
-    }
-
-    return matches;
-}
-
 gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *tag, GError **error)
 {
     if (!validate_tag(tag, error)) {
@@ -258,19 +248,31 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
     return TRUE;
 }
 
-gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error)
+gboolean task_manager_is_valid_tag(const gchar *tag, GError **error) { return validate_tag(tag, error); }
+
+const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error)
 {
-    Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
-    if (task == NULL) {
-        return FALSE;
+    return task_manager_task_lookup(manager->tasks_by_id, id, error);
+}
+
+GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag, GError **error)
+{
+    if (!validate_tag(tag, error)) {
+        return NULL;
     }
 
-    task_manager_unindex_task(manager, task);
+    GPtrArray *matches = g_ptr_array_new();
+    const GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
 
-    // free task original memory
-    g_hash_table_remove(manager->tasks_by_id, GUINT_TO_POINTER(task->id));
+    if (tasks == NULL) {
+        return matches;
+    }
 
-    return TRUE;
+    for (guint i = 0; i < tasks->len; ++i) {
+        g_ptr_array_add(matches, g_ptr_array_index(tasks, i));
+    }
+
+    return matches;
 }
 
 GPtrArray *task_manager_top_tasks(const TaskManager *manager, guint n)
@@ -348,8 +350,6 @@ TaskManagerStats task_manager_get_stats(const TaskManager *manager)
 
     return stats;
 }
-
-gboolean task_manager_is_valid_tag(const gchar *tag, GError **error) { return validate_tag(tag, error); }
 
 #ifdef TASK_MANAGER_TESTING
 void task_manager_set_next_id_for_test(TaskManager *manager, guint next_id) { manager->next_id = next_id; }
