@@ -93,9 +93,9 @@ static void test_cli_add(void)
 
     const Task *task1 = task_manager_find_task_by_id(manager, 1, &error);
     g_assert_no_error(error);
-    g_assert_cmpstr(task1->title, ==, "buy milk");
-    g_assert_cmpuint(task1->tags->len, ==, 2);
-    g_assert_cmpint(task1->priority, ==, 5);
+    g_assert_cmpstr(task_get_title(task1), ==, "buy milk");
+    g_assert_cmpuint(task_get_tag_count(task1), ==, 2);
+    g_assert_cmpint(task_get_priority(task1), ==, 5);
 
     g_string_truncate(output, 0);
 
@@ -107,9 +107,9 @@ static void test_cli_add(void)
 
     const Task *task2 = task_manager_find_task_by_id(manager, 2, &error);
     g_assert_no_error(error);
-    g_assert_cmpstr(task2->title, ==, "title");
-    g_assert_cmpuint(task2->tags->len, ==, 0);
-    g_assert_cmpint(task2->priority, ==, 5);
+    g_assert_cmpstr(task_get_title(task2), ==, "title");
+    g_assert_cmpuint(task_get_tag_count(task2), ==, 0);
+    g_assert_cmpint(task_get_priority(task2), ==, 5);
 
     g_string_truncate(output, 0);
 
@@ -121,9 +121,9 @@ static void test_cli_add(void)
 
     const Task *task3 = task_manager_find_task_by_id(manager, 3, &error);
     g_assert_no_error(error);
-    g_assert_cmpstr(task3->title, ==, "buy milk");
-    g_assert_cmpuint(task3->tags->len, ==, 1);
-    g_assert_cmpint(task3->priority, ==, 5);
+    g_assert_cmpstr(task_get_title(task3), ==, "buy milk");
+    g_assert_cmpuint(task_get_tag_count(task3), ==, 1);
+    g_assert_cmpint(task_get_priority(task3), ==, 5);
 
     g_string_free(output, TRUE);
     task_manager_free(manager);
@@ -305,8 +305,8 @@ static void test_cli_tag(void)
     const Task *task = task_manager_find_task_by_id(manager, id, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
-    g_assert_cmpuint(task->tags->len, ==, 1);
-    g_assert_cmpstr(g_ptr_array_index(task->tags, 0), ==, "work");
+    g_assert_cmpuint(task_get_tag_count(task), ==, 1);
+    g_assert_cmpstr(task_get_tag(task, 0), ==, "work");
 
     GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work", &error);
     g_assert_no_error(error);
@@ -332,9 +332,9 @@ static void test_cli_tag(void)
     g_assert_cmpuint(matches_after_duplicate->len, ==, 1);
 
     const Task *tagged_task = g_ptr_array_index(matches_after_duplicate, 0);
-    g_assert_cmpuint(tagged_task->id, ==, 1);
-    g_assert_cmpuint(tagged_task->tags->len, ==, 1);
-    g_assert_cmpstr(g_ptr_array_index(tagged_task->tags, 0), ==, "work");
+    g_assert_cmpuint(task_get_id(tagged_task), ==, 1);
+    g_assert_cmpuint(task_get_tag_count(tagged_task), ==, 1);
+    g_assert_cmpstr(task_get_tag(tagged_task, 0), ==, "work");
     g_ptr_array_unref(matches_after_duplicate);
 
     g_string_free(output, TRUE);
@@ -385,7 +385,7 @@ static void test_cli_tag_invalid(void)
         const Task *task = task_manager_find_task_by_id(manager, id, &error);
         g_assert_no_error(error);
         g_assert_nonnull(task);
-        g_assert_cmpuint(task->tags->len, ==, 0);
+        g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 
         GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work", &error);
         g_assert_no_error(error);
@@ -427,13 +427,13 @@ static void test_cli_untag(void)
     const Task *task1 = task_manager_find_task_by_id(manager, id1, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task1);
-    g_assert_cmpuint(task1->tags->len, ==, 0);
+    g_assert_cmpuint(task_get_tag_count(task1), ==, 0);
 
     const Task *task2 = task_manager_find_task_by_id(manager, id2, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task2);
-    g_assert_cmpuint(task2->tags->len, ==, 1);
-    g_assert_cmpstr(g_ptr_array_index(task2->tags, 0), ==, "work");
+    g_assert_cmpuint(task_get_tag_count(task2), ==, 1);
+    g_assert_cmpstr(task_get_tag(task2, 0), ==, "work");
 
     GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work", &error);
     g_assert_no_error(error);
@@ -449,7 +449,7 @@ static void test_cli_untag(void)
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "untagged task 2 from work\n");
-    g_assert_cmpuint(task2->tags->len, ==, 0);
+    g_assert_cmpuint(task_get_tag_count(task2), ==, 0);
 
     tasks = task_manager_find_tasks_by_tag(manager, "work", &error);
     g_assert_no_error(error);
@@ -511,8 +511,8 @@ static void test_cli_untag_invalid(void)
         const Task *task = task_manager_find_task_by_id(manager, id, &error);
         g_assert_no_error(error);
         g_assert_nonnull(task);
-        g_assert_cmpuint(task->tags->len, ==, 1);
-        g_assert_cmpstr(g_ptr_array_index(task->tags, 0), ==, "work");
+        g_assert_cmpuint(task_get_tag_count(task), ==, 1);
+        g_assert_cmpstr(task_get_tag(task, 0), ==, "work");
 
         GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work", &error);
         g_assert_no_error(error);
@@ -553,7 +553,7 @@ static void test_cli_enqueue(void)
     const Task *task = task_manager_find_task_by_id(manager, id, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
-    g_assert_cmpstr(task->title, ==, "title");
+    g_assert_cmpstr(task_get_title(task), ==, "title");
 
     g_string_free(output, TRUE);
     task_manager_free(manager);
@@ -600,7 +600,7 @@ static void test_cli_enqueue_invalid(void)
         const Task *task = task_manager_find_task_by_id(manager, id, &error);
         g_assert_no_error(error);
         g_assert_nonnull(task);
-        g_assert_cmpstr(task->title, ==, "title");
+        g_assert_cmpstr(task_get_title(task), ==, "title");
     }
 
     g_string_free(output, TRUE);
@@ -721,10 +721,10 @@ static void test_cli_find_invalid(void)
         const Task *task = task_manager_find_task_by_id(manager, id, &error);
         g_assert_no_error(error);
         g_assert_nonnull(task);
-        g_assert_cmpstr(task->title, ==, "title");
-        g_assert_cmpint(task->priority, ==, 5);
-        g_assert_cmpuint(task->tags->len, ==, 1);
-        g_assert_cmpstr(g_ptr_array_index(task->tags, 0), ==, "work");
+        g_assert_cmpstr(task_get_title(task), ==, "title");
+        g_assert_cmpint(task_get_priority(task), ==, 5);
+        g_assert_cmpuint(task_get_tag_count(task), ==, 1);
+        g_assert_cmpstr(task_get_tag(task, 0), ==, "work");
 
         GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work", &error);
         g_assert_no_error(error);
@@ -824,8 +824,8 @@ static void test_cli_top_invalid(void)
         const Task *task = task_manager_find_task_by_id(manager, id, &error);
         g_assert_no_error(error);
         g_assert_nonnull(task);
-        g_assert_cmpstr(task->title, ==, "title");
-        g_assert_cmpint(task->priority, ==, 5);
+        g_assert_cmpstr(task_get_title(task), ==, "title");
+        g_assert_cmpint(task_get_priority(task), ==, 5);
     }
 
     g_string_free(output, TRUE);

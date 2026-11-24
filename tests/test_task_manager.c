@@ -27,20 +27,20 @@ static void test_add_find(void)
     const Task *task_first = task_manager_find_task_by_id(manager, id_first, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task_first);
-    g_assert_nonnull(task_first->tags);
-    g_assert_nonnull(task_first->title);
-    g_assert_cmpuint(task_first->id, ==, 1);
-    g_assert_cmpint(task_first->priority, ==, priority_first);
-    g_assert_cmpstr(task_first->title, ==, title_first);
+    g_assert_cmpuint(task_get_tag_count(task_first), ==, 0);
+    g_assert_nonnull(task_get_title(task_first));
+    g_assert_cmpuint(task_get_id(task_first), ==, 1);
+    g_assert_cmpint(task_get_priority(task_first), ==, priority_first);
+    g_assert_cmpstr(task_get_title(task_first), ==, title_first);
 
     const Task *task_second = task_manager_find_task_by_id(manager, id_second, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task_second);
-    g_assert_nonnull(task_second->tags);
-    g_assert_nonnull(task_second->title);
-    g_assert_cmpuint(task_second->id, ==, 2);
-    g_assert_cmpint(task_second->priority, ==, priority_second);
-    g_assert_cmpstr(task_second->title, ==, title_second);
+    g_assert_cmpuint(task_get_tag_count(task_second), ==, 0);
+    g_assert_nonnull(task_get_title(task_second));
+    g_assert_cmpuint(task_get_id(task_second), ==, 2);
+    g_assert_cmpint(task_get_priority(task_second), ==, priority_second);
+    g_assert_cmpstr(task_get_title(task_second), ==, title_second);
 
     task_manager_free(manager);
 }
@@ -74,7 +74,7 @@ static void test_add_invalid(void)
     const Task *task = task_manager_find_task_by_id(manager, last_id, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
-    g_assert_cmpstr(task->title, ==, "Last task");
+    g_assert_cmpstr(task_get_title(task), ==, "Last task");
 
     task_manager_free(manager);
 }
@@ -111,11 +111,11 @@ static void test_invalid_priority(void)
     g_assert_no_error(error);
 
     g_assert_nonnull(task);
-    g_assert_nonnull(task->tags);
-    g_assert_nonnull(task->title);
-    g_assert_cmpuint(task->id, ==, 1);
-    g_assert_cmpint(task->priority, ==, priority);
-    g_assert_cmpstr(task->title, ==, title);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
+    g_assert_nonnull(task_get_title(task));
+    g_assert_cmpuint(task_get_id(task), ==, 1);
+    g_assert_cmpint(task_get_priority(task), ==, priority);
+    g_assert_cmpstr(task_get_title(task), ==, title);
 
     task_manager_free(manager);
 }
@@ -166,16 +166,16 @@ static void test_tag(void)
     result = task_manager_tag_task(manager, task1_id, tag, &error);
     g_assert_no_error(error);
     g_assert_true(result);
-    g_assert_cmpint(task1->tags->len, ==, 1);
-    g_assert_cmpstr(task1->tags->pdata[0], ==, tag);
+    g_assert_cmpuint(task_get_tag_count(task1), ==, 1);
+    g_assert_cmpstr(task_get_tag(task1, 0), ==, tag);
 
     result = task_manager_tag_task(manager, task1_id, tag, &error);
     g_assert_false(result);
     g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG);
     g_clear_error(&error);
 
-    g_assert_cmpuint(task1->tags->len, ==, 1);
-    g_assert_cmpstr(task1->tags->pdata[0], ==, tag);
+    g_assert_cmpuint(task_get_tag_count(task1), ==, 1);
+    g_assert_cmpstr(task_get_tag(task1, 0), ==, tag);
 
     // second task
     guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
@@ -187,10 +187,10 @@ static void test_tag(void)
     result = task_manager_tag_task(manager, task2_id, tag, &error);
     g_assert_no_error(error);
     g_assert_true(result);
-    g_assert_cmpint(task1->tags->len, ==, 1);
-    g_assert_cmpstr(task1->tags->pdata[0], ==, tag);
-    g_assert_cmpint(task2->tags->len, ==, 1);
-    g_assert_cmpstr(task2->tags->pdata[0], ==, tag);
+    g_assert_cmpuint(task_get_tag_count(task1), ==, 1);
+    g_assert_cmpstr(task_get_tag(task1, 0), ==, tag);
+    g_assert_cmpuint(task_get_tag_count(task2), ==, 1);
+    g_assert_cmpstr(task_get_tag(task2, 0), ==, tag);
 
     task_manager_free(manager);
 }
@@ -222,29 +222,29 @@ static void test_invalid_tag(void)
     g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
     g_clear_error(&error);
     g_assert_false(result);
-    g_assert_cmpint(task->tags->len, ==, 0);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 
     result = task_manager_tag_task(manager, task_id, camel_case, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
     g_clear_error(&error);
     g_assert_false(result);
-    g_assert_cmpint(task->tags->len, ==, 0);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 
     result = task_manager_tag_task(manager, task_id, space, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
     g_clear_error(&error);
     g_assert_false(result);
-    g_assert_cmpint(task->tags->len, ==, 0);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 
     result = task_manager_tag_task(manager, 999, tag, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
     g_assert_false(result);
-    g_assert_cmpint(task->tags->len, ==, 0);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 
     result = task_manager_tag_task(manager, task_id, space, NULL);
     g_assert_false(result);
-    g_assert_cmpint(task->tags->len, ==, 0);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 
     task_manager_free(manager);
 }
@@ -392,8 +392,8 @@ static void test_untag(void)
     g_assert_nonnull(tasks);
     g_assert_cmpint(tasks->len, ==, 1);
     g_assert_true(g_ptr_array_index(tasks, 0) == task2);
-    g_assert_cmpint(task1->tags->len, ==, 0);
-    g_assert_cmpint(task2->tags->len, ==, 1);
+    g_assert_cmpuint(task_get_tag_count(task1), ==, 0);
+    g_assert_cmpuint(task_get_tag_count(task2), ==, 1);
     g_ptr_array_unref(tasks);
 
     // untag tag from second (and last)
@@ -405,8 +405,8 @@ static void test_untag(void)
     g_assert_no_error(error);
     g_assert_nonnull(empty_tasks);
     g_assert_cmpint(empty_tasks->len, ==, 0);
-    g_assert_cmpint(task1->tags->len, ==, 0);
-    g_assert_cmpint(task2->tags->len, ==, 0);
+    g_assert_cmpuint(task_get_tag_count(task1), ==, 0);
+    g_assert_cmpuint(task_get_tag_count(task2), ==, 0);
     g_ptr_array_unref(empty_tasks);
 
     // untag untagged
@@ -423,7 +423,7 @@ static void test_untag(void)
     g_assert_no_error(error);
     g_assert_nonnull(new_tasks);
     g_assert_cmpint(new_tasks->len, ==, 1);
-    g_assert_cmpint(task1->tags->len, ==, 1);
+    g_assert_cmpuint(task_get_tag_count(task1), ==, 1);
     g_assert_true(new_tasks->pdata[0] == task1);
     g_ptr_array_unref(new_tasks);
 
@@ -526,7 +526,7 @@ static void test_delete_by_valid_id(void)
     GPtrArray *tasks_after_delete = task_manager_top_tasks(manager, 1);
     g_assert_nonnull(tasks_after_delete);
     g_assert_cmpuint(tasks_after_delete->len, ==, 1);
-    g_assert_cmpuint(((Task *)g_ptr_array_index(tasks_after_delete, 0))->id, ==, task2_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(tasks_after_delete, 0)), ==, task2_id);
     g_ptr_array_unref(tasks_after_delete);
 
     // delete deleted task id
@@ -554,7 +554,7 @@ static void test_delete_by_valid_id(void)
     GPtrArray *tasks_after_adding = task_manager_top_tasks(manager, 1);
     g_assert_nonnull(tasks_after_adding);
     g_assert_cmpuint(tasks_after_adding->len, ==, 1);
-    g_assert_cmpuint(((Task *)g_ptr_array_index(tasks_after_adding, 0))->id, ==, new_task1_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(tasks_after_adding, 0)), ==, new_task1_id);
     g_ptr_array_unref(tasks_after_adding);
 
     task_manager_free(manager);
@@ -584,10 +584,10 @@ static void test_top(void)
     GPtrArray *all_tasks = task_manager_top_tasks(manager, 4);
     g_assert_nonnull(all_tasks);
     g_assert_cmpint(all_tasks->len, ==, 4);
-    g_assert_cmpuint(((const Task *)g_ptr_array_index(all_tasks, 0))->id, ==, task4_id);
-    g_assert_cmpuint(((const Task *)g_ptr_array_index(all_tasks, 1))->id, ==, task1_id);
-    g_assert_cmpuint(((const Task *)g_ptr_array_index(all_tasks, 2))->id, ==, task2_id);
-    g_assert_cmpuint(((const Task *)g_ptr_array_index(all_tasks, 3))->id, ==, task3_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(all_tasks, 0)), ==, task4_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(all_tasks, 1)), ==, task1_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(all_tasks, 2)), ==, task2_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(all_tasks, 3)), ==, task3_id);
 
     g_ptr_array_unref(all_tasks);
 
@@ -599,7 +599,7 @@ static void test_top(void)
     GPtrArray *first_tasks = task_manager_top_tasks(manager, 1);
     g_assert_nonnull(first_tasks);
     g_assert_cmpint(first_tasks->len, ==, 1);
-    g_assert_cmpuint(((const Task *)g_ptr_array_index(first_tasks, 0))->id, ==, task4_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(first_tasks, 0)), ==, task4_id);
     g_ptr_array_unref(first_tasks);
 
     GPtrArray *empty_tasks = task_manager_top_tasks(manager, 0);
@@ -652,7 +652,7 @@ static void test_run(void)
     // run task1
     next_task = task_manager_run_next(manager);
     g_assert_no_error(error);
-    g_assert_cmpuint(next_task->id, ==, task1_id);
+    g_assert_cmpuint(task_get_id(next_task), ==, task1_id);
 
     const Task *not_founded_task1 = task_manager_find_task_by_id(manager, task1_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
@@ -662,8 +662,8 @@ static void test_run(void)
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);
     g_assert_cmpuint(top_tasks->len, ==, 2);
-    g_assert_cmpuint(((const Task *)g_ptr_array_index(top_tasks, 0))->id, !=, task1_id);
-    g_assert_cmpuint(((const Task *)g_ptr_array_index(top_tasks, 1))->id, !=, task1_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(top_tasks, 0)), !=, task1_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(top_tasks, 1)), !=, task1_id);
 
     g_ptr_array_unref(top_tasks);
     task_free(next_task);
@@ -671,7 +671,7 @@ static void test_run(void)
     // run task2
     next_task = task_manager_run_next(manager);
     g_assert_no_error(error);
-    g_assert_cmpuint(next_task->id, ==, task2_id);
+    g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
 
     const Task *not_founded_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
@@ -681,7 +681,7 @@ static void test_run(void)
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);
     g_assert_cmpuint(top_tasks->len, ==, 1);
-    g_assert_cmpuint(((const Task *)g_ptr_array_index(top_tasks, 0))->id, !=, task2_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(top_tasks, 0)), !=, task2_id);
 
     g_ptr_array_unref(top_tasks);
     task_free(next_task);
@@ -689,7 +689,7 @@ static void test_run(void)
     // run task3
     next_task = task_manager_run_next(manager);
     g_assert_no_error(error);
-    g_assert_cmpuint(next_task->id, ==, task3_id);
+    g_assert_cmpuint(task_get_id(next_task), ==, task3_id);
 
     const Task *not_founded_task3 = task_manager_find_task_by_id(manager, task3_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
@@ -742,7 +742,7 @@ static void test_run_duplicated(void)
     // run task1
     next_task = task_manager_run_next(manager);
     g_assert_no_error(error);
-    g_assert_cmpuint(next_task->id, ==, task1_id);
+    g_assert_cmpuint(task_get_id(next_task), ==, task1_id);
 
     const Task *not_founded_task1 = task_manager_find_task_by_id(manager, task1_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
@@ -752,7 +752,7 @@ static void test_run_duplicated(void)
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);
     g_assert_cmpuint(top_tasks->len, ==, 1);
-    g_assert_cmpuint(((const Task *)g_ptr_array_index(top_tasks, 0))->id, !=, task1_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(top_tasks, 0)), !=, task1_id);
 
     g_ptr_array_unref(top_tasks);
     task_free(next_task);
@@ -760,7 +760,7 @@ static void test_run_duplicated(void)
     // run task2
     next_task = task_manager_run_next(manager);
     g_assert_no_error(error);
-    g_assert_cmpuint(next_task->id, ==, task2_id);
+    g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
 
     const Task *not_founded_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
@@ -832,7 +832,7 @@ static void test_run_with_delete(void)
 
     next_task = task_manager_run_next(manager);
     g_assert_no_error(error);
-    g_assert_cmpuint(next_task->id, ==, task2_id);
+    g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
 
     const Task *not_founded_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);

@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 typedef struct _CliCommand CliCommand;
-typedef gboolean (*CliHandler)(TaskManager *, gchar *const *, GString *, GError **);
+typedef void (*CliHandler)(TaskManager *, gchar *const *, GString *, GError **);
 
 struct _CliCommand
 {
@@ -53,13 +53,13 @@ static gboolean validate_add_tags(gchar *const *first_tag, GError **error)
 }
 
 // add <priority> <title> [#tag1 #tag2 ...]
-static gboolean cmd_add(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static void cmd_add(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     // validate args
     gint64 priority;
     if (args[0] == NULL || !g_ascii_string_to_signed(args[0], 10, G_MININT, G_MAXINT, &priority, NULL)) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: add <priority> <title> [#tag ...]");
-        return FALSE;
+        return;
     }
 
     gchar *const *const title_words = args + 1;
@@ -71,11 +71,11 @@ static gboolean cmd_add(TaskManager *manager, gchar *const *args, GString *outpu
 
     if (first_tag == title_words) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "missing task title");
-        return FALSE;
+        return;
     }
 
     if (!validate_add_tags(first_tag, error)) {
-        return FALSE;
+        return;
     }
 
     GString *title = g_string_new(NULL);
@@ -92,180 +92,182 @@ static gboolean cmd_add(TaskManager *manager, gchar *const *args, GString *outpu
     g_string_free(title, TRUE);
 
     if (task_id == 0) {
-        return FALSE;
+        return;
     }
 
     for (gchar *const *tag = first_tag; *tag != NULL; ++tag) {
         if (!task_manager_tag_task(manager, task_id, *tag + 1, error)) {
             task_manager_remove_task(manager, task_id, NULL);
-            return FALSE;
+            return;
         }
     }
 
     g_string_append_printf(output, "added task %u\n", task_id);
-    return TRUE;
+    return;
 }
 
-static gboolean cmd_del(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static void cmd_del(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: del <id>");
-        return FALSE;
+        return;
     }
 
     guint id;
     if (!parse_id(args[0], &id, error)) {
-        return FALSE;
+        return;
     }
 
     if (!task_manager_remove_task(manager, id, error)) {
-        return FALSE;
+        return;
     }
 
     g_string_append_printf(output, "deleted task %u\n", id);
-    return TRUE;
+    return;
 }
 
-static gboolean cmd_tag(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static void cmd_tag(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] == NULL || args[2] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: tag <id> <#tag>");
-        return FALSE;
+        return;
     }
 
     guint id;
     if (!parse_id(args[0], &id, error)) {
-        return FALSE;
+        return;
     }
 
     if (args[1][0] != '#') {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: tag <id> <#tag>");
-        return FALSE;
+        return;
     }
 
     const gchar *tag = args[1] + 1;
     if (!task_manager_tag_task(manager, id, tag, error)) {
-        return FALSE;
+        return;
     }
 
     g_string_append_printf(output, "tagged task %u with %s\n", id, tag);
-    return TRUE;
+    return;
 }
 
-static gboolean cmd_untag(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static void cmd_untag(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] == NULL || args[2] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: untag <id> <#tag>");
-        return FALSE;
+        return;
     }
 
     guint id;
     if (!parse_id(args[0], &id, error)) {
-        return FALSE;
+        return;
     }
 
     if (args[1][0] != '#') {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: untag <id> <#tag>");
-        return FALSE;
+        return;
     }
 
     const gchar *tag = args[1] + 1;
     if (!task_manager_untag_task(manager, id, tag, error)) {
-        return FALSE;
+        return;
     }
 
     g_string_append_printf(output, "untagged task %u from %s\n", id, tag);
-    return TRUE;
+    return;
 }
 
-static gboolean cmd_enqueue(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static void cmd_enqueue(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: enqueue <id>");
-        return FALSE;
+        return;
     }
 
     guint id;
     if (!parse_id(args[0], &id, error)) {
-        return FALSE;
+        return;
     }
 
     if (!task_manager_enqueue_task(manager, id, error)) {
-        return FALSE;
+        return;
     }
 
     g_string_append_printf(output, "enqueued task %u\n", id);
-    return TRUE;
+    return;
 }
 
-static gboolean cmd_find(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static void cmd_find(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] != NULL || args[0][0] != '#') {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: find <#tag>");
-        return FALSE;
+        return;
     }
 
     GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, args[0] + 1, error);
     if (tasks == NULL) {
-        return FALSE;
+        return;
     }
 
     for (guint i = 0; i < tasks->len; ++i) {
         const Task *task = g_ptr_array_index(tasks, i);
-        g_string_append_printf(output, "id: %u, priority: %d, title: %s\n", task->id, task->priority, task->title);
+        g_string_append_printf(
+            output, "id: %u, priority: %d, title: %s\n", task_get_id(task), task_get_priority(task), task_get_title(task));
     }
 
     g_ptr_array_unref(tasks);
-    return TRUE;
+    return;
 }
 
-static gboolean cmd_top(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static void cmd_top(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: top <n>");
-        return FALSE;
+        return;
     }
 
     guint64 n;
     if (!g_ascii_string_to_unsigned(args[0], 10, 0, G_MAXUINT, &n, NULL)) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "expected an unsigned int <n>");
-        return FALSE;
+        return;
     }
 
     GPtrArray *tasks = task_manager_top_tasks(manager, (guint)n);
     for (guint i = 0; i < tasks->len; ++i) {
         const Task *task = g_ptr_array_index(tasks, i);
-        g_string_append_printf(output, "id: %u, priority: %d, title: %s\n", task->id, task->priority, task->title);
+        g_string_append_printf(
+            output, "id: %u, priority: %d, title: %s\n", task_get_id(task), task_get_priority(task), task_get_title(task));
     }
 
     g_ptr_array_unref(tasks);
-    return TRUE;
+    return;
 }
 
-static gboolean cmd_run(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static void cmd_run(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: run");
-        return FALSE;
+        return;
     }
 
     Task *task = task_manager_run_next(manager);
     if (task == NULL) {
         g_string_append_printf(output, "queue is empty\n");
-        return TRUE;
+        return;
     }
 
-    g_string_append_printf(output, "running: %s (id %u, priority %d)\n", task->title, task->id, task->priority);
+    g_string_append_printf(output, "running: %s (id %u, priority %d)\n", task_get_title(task), task_get_id(task), task_get_priority(task));
 
     task_free(task);
-    return TRUE;
+    return;
 }
 
-static gboolean cmd_history(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static void cmd_history(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: history");
-        return FALSE;
+        return;
     }
 
     GPtrArray *history = task_manager_get_history(manager);
@@ -275,20 +277,20 @@ static gboolean cmd_history(TaskManager *manager, gchar *const *args, GString *o
     }
 
     g_ptr_array_unref(history);
-    return TRUE;
+    return;
 }
 
-static gboolean cmd_stats(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static void cmd_stats(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: stats");
-        return FALSE;
+        return;
     }
 
     const TaskManagerStats stats = task_manager_get_stats(manager);
     g_string_append_printf(output, "tasks: %u\ntags: %u\nqueue: %u\n", stats.tasks, stats.unique_tags, stats.queue_length);
 
-    return TRUE;
+    return;
 }
 
 static const CliCommand commands[] = {
