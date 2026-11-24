@@ -93,36 +93,6 @@ static void task_manager_remove_task_from_tag(TaskManager *manager, const Task *
     }
 }
 
-static gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
-{
-    (void)user_data;  // unused data
-    const Task *first = a;
-    const Task *second = b;
-
-    if (first->priority > second->priority) {
-        return -1;
-    }
-    if (first->priority < second->priority) {
-        return 1;
-    }
-
-    if (first->created_at > second->created_at) {
-        return 1;
-    }
-    if (first->created_at < second->created_at) {
-        return -1;
-    }
-
-    if (first->id > second->id) {
-        return 1;
-    }
-    if (first->id < second->id) {
-        return -1;
-    }
-
-    return 0;
-}
-
 static void task_manager_unindex_task(TaskManager *manager, Task *task)
 {
     for (guint i = 0; i < task->tags->len; ++i) {

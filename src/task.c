@@ -27,6 +27,36 @@ gboolean task_is_tag_existed(const Task *task, const gchar *tag)
     return g_ptr_array_find_with_equal_func(task->tags, tag, g_str_equal, NULL);
 }
 
+gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
+{
+    (void)user_data;  // unused data
+    const Task *first = a;
+    const Task *second = b;
+
+    if (first->priority > second->priority) {
+        return -1;
+    }
+    if (first->priority < second->priority) {
+        return 1;
+    }
+
+    if (first->created_at > second->created_at) {
+        return 1;
+    }
+    if (first->created_at < second->created_at) {
+        return -1;
+    }
+
+    if (first->id > second->id) {
+        return 1;
+    }
+    if (first->id < second->id) {
+        return -1;
+    }
+
+    return 0;
+}
+
 void task_add_tag(Task *task, const gchar *tag) { g_ptr_array_add(task->tags, g_strdup(tag)); }
 
 void task_remove_tag(Task *task, const gchar *tag)
