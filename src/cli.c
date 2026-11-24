@@ -25,37 +25,9 @@ static gboolean parse_id(const gchar *word, guint *id, GError **error)
     return TRUE;
 }
 
-static gboolean validate_add_tags(gchar *const *first_tag, GError **error)
-{
-    if (*first_tag == NULL) {
-        return TRUE;
-    }
-
-    g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
-    for (gchar *const *word = first_tag; *word != NULL; ++word) {
-        if ((*word)[0] != '#') {
-            g_set_error(error, CLI_ERROR, CLI_ERROR_USAGE, "expected a tag, got: %s", *word);
-            return FALSE;
-        }
-
-        const gchar *tag = *word + 1;
-        if (!task_manager_is_valid_tag(tag, error)) {
-            return FALSE;
-        }
-
-        if (!g_hash_table_add(seen, *word)) {
-            g_set_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
-            return FALSE;
-        }
-    }
-
-    return TRUE;
-}
-
 // add <priority> <title> [#tag1 #tag2 ...]
 static void cmd_add(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
-    // validate args
     gint64 priority;
     if (args[0] == NULL || !g_ascii_string_to_signed(args[0], 10, G_MININT, G_MAXINT, &priority, NULL)) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: add <priority> <title> [#tag ...]");
@@ -64,7 +36,6 @@ static void cmd_add(TaskManager *manager, gchar *const *args, GString *output, G
 
     gchar *const *const title_words = args + 1;
     gchar *const *first_tag = title_words;
-
     while (*first_tag != NULL && (*first_tag)[0] != '#') {
         ++first_tag;
     }
@@ -74,12 +45,17 @@ static void cmd_add(TaskManager *manager, gchar *const *args, GString *output, G
         return;
     }
 
-    if (!validate_add_tags(first_tag, error)) {
-        return;
+    g_autoptr(GPtrArray) tags = g_ptr_array_new();
+    for (gchar *const *word = first_tag; *word != NULL; ++word) {
+        if ((*word)[0] != '#') {
+            g_set_error(error, CLI_ERROR, CLI_ERROR_USAGE, "expected a tag, got: %s", *word);
+            return;
+        }
+
+        g_ptr_array_add(tags, *word + 1);
     }
 
-    GString *title = g_string_new(NULL);
-
+    g_autoptr(GString) title = g_string_new(NULL);
     for (gchar *const *word = title_words; word != first_tag; ++word) {
         if (word != title_words) {
             g_string_append_c(title, ' ');
@@ -87,19 +63,9 @@ static void cmd_add(TaskManager *manager, gchar *const *args, GString *output, G
         g_string_append(title, *word);
     }
 
-    // add task
-    const guint task_id = task_manager_add_task(manager, title->str, (gint)priority, error);
-    g_string_free(title, TRUE);
-
+    const guint task_id = task_manager_add_task_with_tags(manager, title->str, (gint)priority, tags, error);
     if (task_id == 0) {
         return;
-    }
-
-    for (gchar *const *tag = first_tag; *tag != NULL; ++tag) {
-        if (!task_manager_tag_task(manager, task_id, *tag + 1, error)) {
-            task_manager_remove_task(manager, task_id, NULL);
-            return;
-        }
     }
 
     g_string_append_printf(output, "added task %u\n", task_id);

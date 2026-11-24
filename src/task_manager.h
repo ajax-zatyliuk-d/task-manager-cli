@@ -47,6 +47,10 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(TaskManager, task_manager_free);
  * sets %TM_ERROR_ID_EXHAUSTED. Neither error adds a task.
  */
 guint task_manager_add_task(TaskManager *manager, const gchar *title, gint priority, GError **error);
+// Adds a task with its initial tags. NULL or an empty array means no tags.
+// Tags are borrowed strings without '#' and are copied on success.
+// Returns the new task ID, or 0 on failure.
+guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, gint priority, const GPtrArray *tags, GError **error);
 gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error);
 
 // Adds a non-empty tag containing only [a-z0-9_] and returns TRUE.
@@ -58,8 +62,6 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
 // return TRUE if tag is valid and ID is existed and FALSE if get some error
 // errors that can be added: TM_ERROR_TASK_NOT_FOUND or TM_ERROR_INVALID_TAG
 gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *tag, GError **error);
-
-gboolean task_manager_is_valid_tag(const gchar *tag, GError **error);
 
 const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error);
 

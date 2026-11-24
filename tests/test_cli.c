@@ -159,10 +159,14 @@ static void test_cli_add_invalid(void)
     g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
 
-    status = cli_execute_line(manager, "add 5 title #Bad", output, &error);
+    status = cli_execute_line(manager, "add 5 title #ok #Bad", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
     g_clear_error(&error);
+
+    const TaskManagerStats stats_after_invalid_tag = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats_after_invalid_tag.tasks, ==, 0);
+    g_assert_cmpuint(stats_after_invalid_tag.unique_tags, ==, 0);
 
     status = cli_execute_line(manager, "add 5 title #ok word", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);

@@ -55,7 +55,31 @@ static gboolean validate_tag(const gchar *tag, GError **error)
     return TRUE;
 }
 
-static void task_manager_tasks_by_tag_add(GHashTable *tasks_by_tag, Task *task, const gchar *tag)
+static gboolean validate_tags(const GPtrArray *tags, GError **error)
+{
+    if (tags == NULL) {
+        return TRUE;
+    }
+
+    g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+    for (guint i = 0; i < tags->len; i++) {
+        gpointer item = g_ptr_array_index(tags, i);
+        const gchar *tag = item;
+
+        if (!validate_tag(tag, error)) {
+            return FALSE;
+        }
+
+        if (!g_hash_table_add(seen, item)) {
+            g_set_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+static void task_manager_add_tasks_by_tag(GHashTable *tasks_by_tag, Task *task, const gchar *tag)
 {
     GPtrArray *tasks = g_hash_table_lookup(tasks_by_tag, tag);
 
@@ -67,13 +91,20 @@ static void task_manager_tasks_by_tag_add(GHashTable *tasks_by_tag, Task *task, 
     g_ptr_array_add(tasks, task);
 }
 
-static void task_manager_unique_tags_add(GHashTable *unique_tags, const gchar *tag)
+static void task_manager_add_unique_tags(GHashTable *unique_tags, const gchar *tag)
 {
     if (g_hash_table_contains(unique_tags, tag)) {
         return;
     }
 
     g_hash_table_add(unique_tags, g_strdup(tag));
+}
+
+static void attach_tag(TaskManager *manager, Task *task, const gchar *tag)
+{
+    task_add_tag(task, tag);
+    task_manager_add_tasks_by_tag(manager->tasks_by_tag, task, tag);
+    task_manager_add_unique_tags(manager->unique_tags, tag);
 }
 
 static void task_manager_remove_task_from_tag(TaskManager *manager, const Task *task, const gchar *tag)
@@ -168,6 +199,28 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
     return task_get_id(task);
 }
 
+guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, gint priority, const GPtrArray *tags, GError **error)
+{
+    if (!validate_tags(tags, error)) {
+        return 0;
+    }
+
+    const guint task_id = task_manager_add_task(manager, title, priority, error);
+    if (task_id == 0 || tags == NULL || tags->len == 0) {
+        return task_id;
+    }
+
+    Task *task = g_hash_table_lookup(manager->tasks_by_id, GUINT_TO_POINTER(task_id));
+    g_assert_nonnull(task);
+
+    for (guint i = 0; i < tags->len; ++i) {
+        const gchar *tag = g_ptr_array_index(tags, i);
+        attach_tag(manager, task, tag);
+    }
+
+    return task_id;
+}
+
 gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error)
 {
     Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
@@ -200,8 +253,8 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
     }
 
     task_add_tag(task, tag);
-    task_manager_tasks_by_tag_add(manager->tasks_by_tag, task, tag);
-    task_manager_unique_tags_add(manager->unique_tags, tag);
+    task_manager_add_tasks_by_tag(manager->tasks_by_tag, task, tag);
+    task_manager_add_unique_tags(manager->unique_tags, tag);
 
     return TRUE;
 }
@@ -226,8 +279,6 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
 
     return TRUE;
 }
-
-gboolean task_manager_is_valid_tag(const gchar *tag, GError **error) { return validate_tag(tag, error); }
 
 const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error)
 {
