@@ -25,7 +25,6 @@ struct _TaskManagerStats
 };
 
 #define TM_ERROR (task_manager_error_quark())
-
 GQuark task_manager_error_quark(void);
 
 TaskManager *task_manager_new(void);
