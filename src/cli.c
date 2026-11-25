@@ -304,6 +304,11 @@ CliStatus cli_execute_line(TaskManager *manager, const gchar *command_line, GStr
         return CLI_CONTINUE;
     }
 
+    if (!g_utf8_validate(command_line, -1, NULL)) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "command must be valid UTF-8");
+        return CLI_CONTINUE;
+    }
+
     g_autofree gchar *command = g_strdup(command_line);
     g_strstrip(command);
 

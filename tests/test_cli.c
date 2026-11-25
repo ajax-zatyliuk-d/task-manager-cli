@@ -105,6 +105,24 @@ static void test_cli_numeric_tokens(gconstpointer data)
     g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 0);
 }
 
+static void test_cli_invalid_utf8(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    g_autoptr(GError) error = NULL;
+    const gchar command[] = "add 5 \xFF";
+
+    CliStatus status = cli_execute_line(manager, command, output, &error);
+
+    g_assert_cmpint(status, ==, CLI_CONTINUE);
+    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
+    g_assert_cmpstr(output->str, ==, "");
+    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 0);
+
+    g_autoptr(GPtrArray) history = task_manager_get_history(manager);
+    g_assert_cmpuint(history->len, ==, 0);
+}
+
 static const AddCase add_cases[] = {
     {"add 5 buy milk", "buy milk", NULL, NULL, 0},
     {"add 5 title #home #shop", "title", "home", "shop", 2},
@@ -1065,6 +1083,7 @@ int main(int argc, char **argv)
     g_test_add_data_func("/cli/parse/numeric/del-overflow", &numeric_cases[PARSE_NUMERIC_DEL_OVERFLOW], test_cli_numeric_tokens);
     g_test_add_data_func("/cli/parse/numeric/top-suffix", &numeric_cases[PARSE_NUMERIC_TOP_SUFFIX], test_cli_numeric_tokens);
     g_test_add_data_func("/cli/parse/numeric/top-overflow", &numeric_cases[PARSE_NUMERIC_TOP_OVERFLOW], test_cli_numeric_tokens);
+    g_test_add_func("/cli/parse/invalid-utf8", test_cli_invalid_utf8);
 
     g_test_add_data_func("/cli/add/multiword-title", &add_cases[0], test_cli_add);
     g_test_add_data_func("/cli/add/multiple-tags", &add_cases[1], test_cli_add);
