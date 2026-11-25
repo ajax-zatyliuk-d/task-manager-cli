@@ -54,6 +54,39 @@ typedef struct
     guint expected_tag_count;
 } AddCase;
 
+static void test_cli_numeric_tokens(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    const struct
+    {
+        const gchar *command;
+        const gchar *message;
+    } cases[] = {
+        {"add 5x title", "usage: add <priority> <title> [#tag ...]"},
+        {"add 999999999999999999999 title", "usage: add <priority> <title> [#tag ...]"},
+        {"del 1x", "invalid id 1x"},
+        {"del 999999999999999999999", "invalid id 999999999999999999999"},
+        {"top 1x", "expected an unsigned int <n>"},
+        {"top 999999999999999999999", "expected an unsigned int <n>"},
+    };
+    for (guint i = 0; i < G_N_ELEMENTS(cases); ++i) {
+        g_autoptr(GError) error = NULL;
+        g_test_message("%s", cases[i].command);
+        g_assert_cmpint(cli_execute_line(manager, cases[i].command, output, &error), ==, CLI_CONTINUE);
+        g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
+        g_assert_cmpstr(error->message, ==, cases[i].message);
+        g_assert_cmpstr(output->str, ==, "");
+        g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 0);
+    }
+}
+
+static const AddCase add_cases[] = {
+    {"add 5 buy milk", "buy milk", NULL, NULL, 0},
+    {"add 5 title #home #shop", "title", "home", "shop", 2},
+    {"add  5   buy   milk  #a", "buy milk", "a", NULL, 1},
+};
+
 static void test_cli_add(gconstpointer data)
 {
     const AddCase *test_case = data;
@@ -78,12 +111,6 @@ static void test_cli_add(gconstpointer data)
         g_assert_cmpstr(task_get_tag(task, 1), ==, test_case->second_tag);
     }
 }
-
-static const AddCase add_cases[] = {
-    {"add 5 buy milk", "buy milk", NULL, NULL, 0},
-    {"add 5 title #home #shop", "title", "home", "shop", 2},
-    {"add  5   buy   milk  #a", "buy milk", "a", NULL, 1},
-};
 
 static void test_cli_add_syntax_errors(void)
 {
@@ -227,6 +254,34 @@ static void test_cli_del_invalid(void)
 
     g_string_free(output, TRUE);
     task_manager_free(manager);
+}
+
+static void test_cli_tag_lifecycle(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    const struct
+    {
+        const gchar *command;
+        const gchar *expected;
+    } cases[] = {
+        {"add 5 buy milk #home", "added task 1\n"},
+        {"find #home", "id: 1, priority: 5, title: buy milk\n"},
+        {"untag 1 #home", "untagged task 1 from home\n"},
+        {"find #home", ""},
+        {"del 1", "deleted task 1\n"},
+        {"history", "add 5 buy milk #home\nfind #home\nuntag 1 #home\nfind #home\ndel 1\n"},
+    };
+    for (guint i = 0; i < G_N_ELEMENTS(cases); ++i) {
+        g_autoptr(GError) error = NULL;
+        g_string_truncate(output, 0);
+        g_assert_cmpint(cli_execute_line(manager, cases[i].command, output, &error), ==, CLI_CONTINUE);
+        g_assert_no_error(error);
+        g_assert_cmpstr(output->str, ==, cases[i].expected);
+    }
+    const TaskManagerStats stats = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats.tasks, ==, 0);
+    g_assert_cmpuint(stats.unique_tags, ==, 0);
 }
 
 static void test_cli_tag(void)
@@ -551,6 +606,93 @@ static void test_cli_enqueue_invalid(void)
     task_manager_free(manager);
 }
 
+static void test_cli_run(void)
+{
+    TaskManager *manager = task_manager_new();
+    g_assert_nonnull(manager);
+
+    GError *error = NULL;
+    GString *output = g_string_new(NULL);
+
+    guint id1 = task_manager_add_task(manager, "first", 3, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(id1, ==, 1);
+
+    guint id2 = task_manager_add_task(manager, "second", 9, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(id2, ==, 2);
+
+    CliStatus status = cli_execute_line(manager, "enqueue 1", output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+
+    status = cli_execute_line(manager, "enqueue 2", output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_string_truncate(output, 0);
+
+    TaskManagerStats stats;
+
+    // FIFO runs the first enqueued task even though it has lower priority.
+    status = cli_execute_line(manager, "run", output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_assert_cmpstr(output->str, ==, "running: first (id 1, priority 3)\n");
+
+    const Task *task = task_manager_find_task_by_id(manager, id1, &error);
+    g_assert_null(task);
+    g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
+    g_clear_error(&error);
+
+    task = task_manager_find_task_by_id(manager, id2, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(task);
+
+    stats = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats.tasks, ==, 1);
+    g_assert_cmpuint(stats.queue_length, ==, 1);
+
+    g_string_truncate(output, 0);
+
+    status = cli_execute_line(manager, "run", output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_assert_cmpstr(output->str, ==, "running: second (id 2, priority 9)\n");
+
+    stats = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats.tasks, ==, 0);
+    g_assert_cmpuint(stats.queue_length, ==, 0);
+
+    g_string_free(output, TRUE);
+    task_manager_free(manager);
+}
+
+static void test_cli_run_invalid(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
+    const guint id = task_manager_add_task(manager, "first", 3, &error);
+    g_assert_no_error(error);
+    g_assert_true(task_manager_enqueue_task(manager, id, &error));
+    g_assert_no_error(error);
+    g_assert_cmpint(cli_execute_line(manager, "run 1", output, &error), ==, CLI_CONTINUE);
+    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
+    g_assert_cmpstr(output->str, ==, "");
+    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 1);
+    g_assert_cmpuint(task_manager_get_stats(manager).queue_length, ==, 1);
+}
+
+static void test_cli_run_empty(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
+    g_assert_cmpint(cli_execute_line(manager, "run", output, &error), ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_assert_cmpstr(output->str, ==, "queue is empty\n");
+}
+
 static void test_cli_find_no_matches(void)
 {
     g_autoptr(TaskManager) manager = task_manager_new();
@@ -755,93 +897,6 @@ static void test_cli_top_invalid(void)
     task_manager_free(manager);
 }
 
-static void test_cli_run(void)
-{
-    TaskManager *manager = task_manager_new();
-    g_assert_nonnull(manager);
-
-    GError *error = NULL;
-    GString *output = g_string_new(NULL);
-
-    guint id1 = task_manager_add_task(manager, "first", 3, &error);
-    g_assert_no_error(error);
-    g_assert_cmpuint(id1, ==, 1);
-
-    guint id2 = task_manager_add_task(manager, "second", 9, &error);
-    g_assert_no_error(error);
-    g_assert_cmpuint(id2, ==, 2);
-
-    CliStatus status = cli_execute_line(manager, "enqueue 1", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-
-    status = cli_execute_line(manager, "enqueue 2", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-    g_string_truncate(output, 0);
-
-    TaskManagerStats stats;
-
-    // FIFO runs the first enqueued task even though it has lower priority.
-    status = cli_execute_line(manager, "run", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "running: first (id 1, priority 3)\n");
-
-    const Task *task = task_manager_find_task_by_id(manager, id1, &error);
-    g_assert_null(task);
-    g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
-    g_clear_error(&error);
-
-    task = task_manager_find_task_by_id(manager, id2, &error);
-    g_assert_no_error(error);
-    g_assert_nonnull(task);
-
-    stats = task_manager_get_stats(manager);
-    g_assert_cmpuint(stats.tasks, ==, 1);
-    g_assert_cmpuint(stats.queue_length, ==, 1);
-
-    g_string_truncate(output, 0);
-
-    status = cli_execute_line(manager, "run", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "running: second (id 2, priority 9)\n");
-
-    stats = task_manager_get_stats(manager);
-    g_assert_cmpuint(stats.tasks, ==, 0);
-    g_assert_cmpuint(stats.queue_length, ==, 0);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
-}
-
-static void test_cli_run_invalid(void)
-{
-    g_autoptr(TaskManager) manager = task_manager_new();
-    g_autoptr(GError) error = NULL;
-    g_autoptr(GString) output = g_string_new(NULL);
-    const guint id = task_manager_add_task(manager, "first", 3, &error);
-    g_assert_no_error(error);
-    g_assert_true(task_manager_enqueue_task(manager, id, &error));
-    g_assert_no_error(error);
-    g_assert_cmpint(cli_execute_line(manager, "run 1", output, &error), ==, CLI_CONTINUE);
-    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-    g_assert_cmpstr(output->str, ==, "");
-    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 1);
-    g_assert_cmpuint(task_manager_get_stats(manager).queue_length, ==, 1);
-}
-
-static void test_cli_run_empty(void)
-{
-    g_autoptr(TaskManager) manager = task_manager_new();
-    g_autoptr(GError) error = NULL;
-    g_autoptr(GString) output = g_string_new(NULL);
-    g_assert_cmpint(cli_execute_line(manager, "run", output, &error), ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "queue is empty\n");
-}
-
 static void test_cli_history_formats_commands(void)
 {
     g_autoptr(TaskManager) manager = task_manager_new();
@@ -974,61 +1029,6 @@ static void test_cli_stats(void)
     task_manager_free(manager);
 }
 
-static void test_cli_numeric_tokens(void)
-{
-    g_autoptr(TaskManager) manager = task_manager_new();
-    g_autoptr(GString) output = g_string_new(NULL);
-    const struct
-    {
-        const gchar *command;
-        const gchar *message;
-    } cases[] = {
-        {"add 5x title", "usage: add <priority> <title> [#tag ...]"},
-        {"add 999999999999999999999 title", "usage: add <priority> <title> [#tag ...]"},
-        {"del 1x", "invalid id 1x"},
-        {"del 999999999999999999999", "invalid id 999999999999999999999"},
-        {"top 1x", "expected an unsigned int <n>"},
-        {"top 999999999999999999999", "expected an unsigned int <n>"},
-    };
-    for (guint i = 0; i < G_N_ELEMENTS(cases); ++i) {
-        g_autoptr(GError) error = NULL;
-        g_test_message("%s", cases[i].command);
-        g_assert_cmpint(cli_execute_line(manager, cases[i].command, output, &error), ==, CLI_CONTINUE);
-        g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-        g_assert_cmpstr(error->message, ==, cases[i].message);
-        g_assert_cmpstr(output->str, ==, "");
-        g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 0);
-    }
-}
-
-static void test_cli_tag_lifecycle(void)
-{
-    g_autoptr(TaskManager) manager = task_manager_new();
-    g_autoptr(GString) output = g_string_new(NULL);
-    const struct
-    {
-        const gchar *command;
-        const gchar *expected;
-    } cases[] = {
-        {"add 5 buy milk #home", "added task 1\n"},
-        {"find #home", "id: 1, priority: 5, title: buy milk\n"},
-        {"untag 1 #home", "untagged task 1 from home\n"},
-        {"find #home", ""},
-        {"del 1", "deleted task 1\n"},
-        {"history", "add 5 buy milk #home\nfind #home\nuntag 1 #home\nfind #home\ndel 1\n"},
-    };
-    for (guint i = 0; i < G_N_ELEMENTS(cases); ++i) {
-        g_autoptr(GError) error = NULL;
-        g_string_truncate(output, 0);
-        g_assert_cmpint(cli_execute_line(manager, cases[i].command, output, &error), ==, CLI_CONTINUE);
-        g_assert_no_error(error);
-        g_assert_cmpstr(output->str, ==, cases[i].expected);
-    }
-    const TaskManagerStats stats = task_manager_get_stats(manager);
-    g_assert_cmpuint(stats.tasks, ==, 0);
-    g_assert_cmpuint(stats.unique_tags, ==, 0);
-}
-
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
@@ -1037,8 +1037,7 @@ int main(int argc, char **argv)
     g_test_add_data_func("/cli/basic/quit", &basic_cases[2], test_cli_basic);
     g_test_add_data_func("/cli/basic/unknown", &basic_cases[3], test_cli_basic);
 
-    g_test_add_func("/cli/numeric-tokens", test_cli_numeric_tokens);
-    g_test_add_func("/cli/tag-lifecycle", test_cli_tag_lifecycle);
+    g_test_add_func("/cli/parse/numeric-tokens", test_cli_numeric_tokens);
 
     g_test_add_data_func("/cli/add/multiword-title", &add_cases[0], test_cli_add);
     g_test_add_data_func("/cli/add/multiple-tags", &add_cases[1], test_cli_add);
@@ -1047,36 +1046,37 @@ int main(int argc, char **argv)
     g_test_add_func("/cli/add/domain-errors", test_cli_add_domain_errors);
     g_test_add_func("/cli/add/id-exhausted", test_cli_add_id_exhausted);
 
-    g_test_add_func("/cli/del", test_cli_del);
-    g_test_add_func("/cli/del-invalid", test_cli_del_invalid);
+    g_test_add_func("/cli/del/success", test_cli_del);
+    g_test_add_func("/cli/del/invalid", test_cli_del_invalid);
 
-    g_test_add_func("/cli/tag", test_cli_tag);
-    g_test_add_func("/cli/tag-invalid", test_cli_tag_invalid);
+    g_test_add_func("/cli/tag/lifecycle", test_cli_tag_lifecycle);
+    g_test_add_func("/cli/tag/success", test_cli_tag);
+    g_test_add_func("/cli/tag/invalid", test_cli_tag_invalid);
 
-    g_test_add_func("/cli/untag", test_cli_untag);
-    g_test_add_func("/cli/untag-invalid", test_cli_untag_invalid);
+    g_test_add_func("/cli/untag/success", test_cli_untag);
+    g_test_add_func("/cli/untag/invalid", test_cli_untag_invalid);
 
-    g_test_add_func("/cli/enqueue", test_cli_enqueue);
-    g_test_add_func("/cli/enqueue-invalid", test_cli_enqueue_invalid);
+    g_test_add_func("/cli/enqueue/success", test_cli_enqueue);
+    g_test_add_func("/cli/enqueue/invalid", test_cli_enqueue_invalid);
+
+    g_test_add_func("/cli/run/success", test_cli_run);
+    g_test_add_func("/cli/run/invalid", test_cli_run_invalid);
+    g_test_add_func("/cli/run/empty", test_cli_run_empty);
 
     g_test_add_func("/cli/find/no-matches", test_cli_find_no_matches);
     g_test_add_func("/cli/find/one-match", test_cli_find_one_match);
     g_test_add_func("/cli/find/multiple-matches", test_cli_find_multiple_matches);
-    g_test_add_func("/cli/find-invalid", test_cli_find_invalid);
+    g_test_add_func("/cli/find/invalid", test_cli_find_invalid);
 
-    g_test_add_func("/cli/top", test_cli_top);
-    g_test_add_func("/cli/top-invalid", test_cli_top_invalid);
-
-    g_test_add_func("/cli/run", test_cli_run);
-    g_test_add_func("/cli/run/invalid", test_cli_run_invalid);
-    g_test_add_func("/cli/run/empty", test_cli_run_empty);
+    g_test_add_func("/cli/top/success", test_cli_top);
+    g_test_add_func("/cli/top/invalid", test_cli_top_invalid);
 
     g_test_add_func("/cli/history/format", test_cli_history_formats_commands);
     g_test_add_func("/cli/history/failed-command", test_cli_history_records_failed_command);
     g_test_add_func("/cli/history/not-recorded", test_cli_history_does_not_record_history_commands);
-    g_test_add_func("/cli/history-limit", test_cli_history_limit);
+    g_test_add_func("/cli/history/limit", test_cli_history_limit);
 
-    g_test_add_func("/cli/stats", test_cli_stats);
+    g_test_add_func("/cli/stats/success", test_cli_stats);
 
     return g_test_run();
 }
