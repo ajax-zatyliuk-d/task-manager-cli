@@ -332,11 +332,14 @@ static void test_remove_removes_all_queue_entries(void)
     // Queue: first, second, first. Removing first leaves second as the next entry.
     g_assert_true(task_manager_remove_task(manager, first_task_id, &error));
     g_assert_no_error(error);
+    g_assert_cmpuint(task_manager_get_stats(manager).queue_length, ==, 1);
 
     next_task = task_manager_extract_next_task(manager);
     g_assert_no_error(error);
     g_assert_nonnull(next_task);
     g_assert_cmpuint(task_get_id(next_task), ==, second_task_id);
+    g_assert_cmpuint(task_manager_get_stats(manager).queue_length, ==, 0);
+    g_assert_null(task_manager_extract_next_task(manager));
 
     const Task *missing_task2 = task_manager_find_task_by_id(manager, second_task_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
