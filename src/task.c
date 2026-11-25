@@ -145,32 +145,6 @@ guint task_get_tag_count(const Task *task) { return task->tags->len; }
 
 gboolean task_has_tag(const Task *task, const gchar *tag) { return g_ptr_array_find_with_equal_func(task->tags, tag, g_str_equal, NULL); }
 
-gint task_compare(const Task *first, const Task *second)
-{
-    if (first->priority > second->priority) {
-        return -1;
-    }
-    if (first->priority < second->priority) {
-        return 1;
-    }
-
-    if (first->created_at > second->created_at) {
-        return 1;
-    }
-    if (first->created_at < second->created_at) {
-        return -1;
-    }
-
-    if (first->id > second->id) {
-        return 1;
-    }
-    if (first->id < second->id) {
-        return -1;
-    }
-
-    return 0;
-}
-
 gboolean task_add_tag(Task *task, const gchar *tag, GError **error)
 {
     if (!validate_new_tag(tag, task->tags, task->tags->len, error)) {
@@ -199,4 +173,30 @@ gboolean task_remove_tag(Task *task, const gchar *tag, gboolean *removed, GError
     }
 
     return TRUE;
+}
+
+gint task_compare(const Task *first, const Task *second)
+{
+    if (first->priority > second->priority) {
+        return -1;
+    }
+    if (first->priority < second->priority) {
+        return 1;
+    }
+
+    if (first->created_at > second->created_at) {
+        return 1;
+    }
+    if (first->created_at < second->created_at) {
+        return -1;
+    }
+
+    if (first->id > second->id) {
+        return 1;
+    }
+    if (first->id < second->id) {
+        return -1;
+    }
+
+    return 0;
 }

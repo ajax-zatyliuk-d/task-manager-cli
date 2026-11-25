@@ -136,18 +136,6 @@ guint task_get_tag_count(const Task *task);
 gboolean task_has_tag(const Task *task, const gchar *tag);
 
 /**
- * task_compare:
- * @first: a task
- * @second: another task
- *
- * Compares descending priority, then ascending creation time and identifier.
- *
- * Returns: a negative value, zero, or a positive value if @first sorts before,
- *   equal to, or after @second, respectively
- */
-gint task_compare(const Task *first, const Task *second);
-
-/**
  * task_add_tag:
  * @task: a task owned by the caller
  * @tag: (nullable): tag to copy
@@ -173,3 +161,15 @@ gboolean task_add_tag(Task *task, const gchar *tag, GError **error);
  *   if @error is provided
  */
 gboolean task_remove_tag(Task *task, const gchar *tag, gboolean *removed, GError **error);
+
+/**
+ * task_compare:
+ * @first: a task
+ * @second: another task
+ *
+ * Compares descending priority, then ascending creation time and identifier.
+ *
+ * Returns: a negative value, zero, or a positive value if @first sorts before,
+ *   equal to, or after @second, respectively
+ */
+gint task_compare(const Task *first, const Task *second);
