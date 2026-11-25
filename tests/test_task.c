@@ -25,7 +25,7 @@ static void test_task_new(void)
     task_free(task);
 }
 
-static void test_task_priority(void)
+static void test_task_new_invalid_priority(void)
 {
     g_autoptr(GError) error = NULL;
     g_assert_null(task_new(1, "invalid", 0, &error));
@@ -35,11 +35,23 @@ static void test_task_priority(void)
     g_assert_null(task_new(1, "invalid", 11, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
+}
 
+static void test_task_set_priority(void)
+{
+    g_autoptr(GError) error = NULL;
     g_autoptr(Task) task = task_new(1, "valid", 1, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_true(task_set_priority(task, 10, &error));
+    g_assert_no_error(error);
+    g_assert_cmpint(task_get_priority(task), ==, 10);
+}
+
+static void test_task_set_invalid_priority(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(Task) task = task_new(1, "valid", 10, &error);
     g_assert_no_error(error);
     g_assert_false(task_set_priority(task, 11, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
@@ -74,7 +86,7 @@ static void test_task_duplicate_tag(void)
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
 }
 
-static void test_task_remove_tag(void)
+static void test_task_remove_invalid_tag(void)
 {
     g_autoptr(GError) error = NULL;
     g_autoptr(Task) task = task_new(1, "valid", 1, &error);
@@ -86,10 +98,28 @@ static void test_task_remove_tag(void)
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
+}
+
+static void test_task_remove_tag(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_assert_no_error(error);
+    g_assert_true(task_add_tag(task, "work_1", &error));
+    g_assert_no_error(error);
+    gboolean removed = FALSE;
     g_assert_true(task_remove_tag(task, "work_1", &removed, &error));
     g_assert_no_error(error);
     g_assert_true(removed);
     g_assert_cmpuint(task_get_tag_count(task), ==, 0);
+}
+
+static void test_task_remove_missing_tag(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_assert_no_error(error);
+    gboolean removed = TRUE;
     g_assert_true(task_remove_tag(task, "work_1", &removed, &error));
     g_assert_no_error(error);
     g_assert_false(removed);
@@ -116,7 +146,7 @@ static void test_task_new_with_tags(void)
     g_assert_cmpstr(task_get_tag(task, 1), ==, "home_1");
 }
 
-static void test_task_new_with_tags_errors(void)
+static void test_task_new_with_invalid_tag(void)
 {
     g_autoptr(GError) error = NULL;
     g_autoptr(GPtrArray) tags = g_ptr_array_new();
@@ -129,12 +159,28 @@ static void test_task_new_with_tags_errors(void)
     g_clear_error(&error);
     g_assert_null(task_new_with_tags(1, "invalid", 5, tags, NULL));
 
-    g_ptr_array_index(tags, 2) = "work";
+    g_assert_cmpstr(g_ptr_array_index(tags, 0), ==, "work");
+}
+
+static void test_task_new_with_duplicate_tag(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GPtrArray) tags = g_ptr_array_new();
+    g_ptr_array_add(tags, "work");
+    g_ptr_array_add(tags, "home");
+    g_ptr_array_add(tags, "work");
     g_assert_null(task_new_with_tags(1, "duplicate", 5, tags, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
     g_clear_error(&error);
     g_assert_null(task_new_with_tags(1, "duplicate", 5, tags, NULL));
+    g_assert_cmpstr(g_ptr_array_index(tags, 0), ==, "work");
+}
 
+static void test_task_new_with_tags_invalid_priority(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GPtrArray) tags = g_ptr_array_new();
+    g_ptr_array_add(tags, "work");
     g_assert_null(task_new_with_tags(1, "invalid priority", 0, tags, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
@@ -147,10 +193,16 @@ int main(int argc, char **argv)
     g_test_init(&argc, &argv, NULL);
     g_test_add_func("/task/new", test_task_new);
     g_test_add_func("/task/new-with-tags", test_task_new_with_tags);
-    g_test_add_func("/task/new-with-tags/errors", test_task_new_with_tags_errors);
-    g_test_add_func("/task/priority", test_task_priority);
+    g_test_add_func("/task/new-with-tags/invalid-tag", test_task_new_with_invalid_tag);
+    g_test_add_func("/task/new-with-tags/duplicate-tag", test_task_new_with_duplicate_tag);
+    g_test_add_func("/task/new-with-tags/invalid-priority", test_task_new_with_tags_invalid_priority);
+    g_test_add_func("/task/priority/new-invalid", test_task_new_invalid_priority);
+    g_test_add_func("/task/priority/set", test_task_set_priority);
+    g_test_add_func("/task/priority/set-invalid", test_task_set_invalid_priority);
     g_test_add_func("/task/tags/invalid", test_task_invalid_tags);
     g_test_add_func("/task/tags/duplicate", test_task_duplicate_tag);
     g_test_add_func("/task/tags/remove", test_task_remove_tag);
+    g_test_add_func("/task/tags/remove-invalid", test_task_remove_invalid_tag);
+    g_test_add_func("/task/tags/remove-missing", test_task_remove_missing_tag);
     return g_test_run();
 }
