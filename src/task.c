@@ -1,4 +1,5 @@
 #include "task.h"
+#include "task_test.h"
 
 #include <stddef.h>
 
@@ -201,3 +202,7 @@ gint task_compare(const Task *first, const Task *second)
 
     return 0;
 }
+
+#ifdef TASK_MANAGER_TESTING
+void task_set_created_at_for_test(Task *task, gint64 created_at) { task->created_at = created_at; }
+#endif

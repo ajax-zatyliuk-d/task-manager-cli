@@ -1,4 +1,5 @@
 #include "task.h"
+#include "task_test.h"
 
 #include <glib.h>
 
@@ -287,6 +288,32 @@ static void test_task_remove_missing_tag(void)
     g_assert_false(removed);
 }
 
+static void test_task_compare_created_at_before_id(void)
+{
+    g_autoptr(Task) older = task_new(2, "older", 5, NULL);
+    g_autoptr(Task) newer = task_new(1, "newer", 5, NULL);
+    g_assert_nonnull(older);
+    g_assert_nonnull(newer);
+    task_set_created_at_for_test(older, 100);
+    task_set_created_at_for_test(newer, 200);
+
+    g_assert_cmpint(task_compare(older, newer), <, 0);
+    g_assert_cmpint(task_compare(newer, older), >, 0);
+}
+
+static void test_task_compare_id_when_created_at_equal(void)
+{
+    g_autoptr(Task) lower_id = task_new(1, "lower", 5, NULL);
+    g_autoptr(Task) higher_id = task_new(2, "higher", 5, NULL);
+    g_assert_nonnull(lower_id);
+    g_assert_nonnull(higher_id);
+    task_set_created_at_for_test(lower_id, 100);
+    task_set_created_at_for_test(higher_id, 100);
+
+    g_assert_cmpint(task_compare(lower_id, higher_id), <, 0);
+    g_assert_cmpint(task_compare(higher_id, lower_id), >, 0);
+}
+
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
@@ -312,5 +339,8 @@ int main(int argc, char **argv)
     g_test_add_func("/task/tags/remove", test_task_remove_tag);
     g_test_add_func("/task/tags/remove-invalid", test_task_remove_invalid_tag);
     g_test_add_func("/task/tags/remove-missing", test_task_remove_missing_tag);
+
+    g_test_add_func("/task/compare/created-at-before-id", test_task_compare_created_at_before_id);
+    g_test_add_func("/task/compare/id-when-created-at-equal", test_task_compare_id_when_created_at_equal);
     return g_test_run();
 }
