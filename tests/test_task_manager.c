@@ -436,9 +436,20 @@ static void test_tag_shared_by_two_tasks(void)
     g_assert_true(task_manager_tag_task(manager, second, "work", &error));
     g_assert_no_error(error);
     g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work");
-    g_assert_no_error(error);
     g_assert_cmpuint(matches->len, ==, 2);
-    g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 1);
+    const Task *first_task = task_manager_find_task_by_id(manager, first, &error);
+    g_assert_no_error(error);
+    const Task *second_task = task_manager_find_task_by_id(manager, second, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(first_task);
+    g_assert_nonnull(second_task);
+    g_assert_true(g_ptr_array_find(matches, first_task, NULL));
+    g_assert_true(g_ptr_array_find(matches, second_task, NULL));
+
+    const TaskManagerStats stats = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats.tasks, ==, 2);
+    g_assert_cmpuint(stats.unique_tags, ==, 1);
+    g_assert_cmpuint(stats.queue_length, ==, 0);
 }
 
 static void test_invalid_tag(void)
@@ -1026,25 +1037,6 @@ static void test_stats_empty(void)
     g_assert_cmpuint(stats.queue_length, ==, 0);
 }
 
-static void test_stats_shared_tags(void)
-{
-    g_autoptr(TaskManager) manager = task_manager_new();
-    g_autoptr(GError) error = NULL;
-    const guint first = task_manager_add_task(manager, "first", 5, &error);
-    g_assert_no_error(error);
-    const guint second = task_manager_add_task(manager, "second", 5, &error);
-    g_assert_no_error(error);
-    g_assert_true(task_manager_tag_task(manager, first, "work", &error));
-    g_assert_no_error(error);
-    g_assert_true(task_manager_tag_task(manager, second, "work", &error));
-    g_assert_no_error(error);
-
-    const TaskManagerStats stats = task_manager_get_stats(manager);
-    g_assert_cmpuint(stats.tasks, ==, 2);
-    g_assert_cmpuint(stats.unique_tags, ==, 1);
-    g_assert_cmpuint(stats.queue_length, ==, 0);
-}
-
 static void test_stats_repeated_queue_entries(void)
 {
     g_autoptr(TaskManager) manager = task_manager_new();
@@ -1135,7 +1127,6 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/history/snapshot", test_history_snapshot);
 
     g_test_add_func("/task-manager/stats/empty", test_stats_empty);
-    g_test_add_func("/task-manager/stats/shared-tags", test_stats_shared_tags);
     g_test_add_func("/task-manager/stats/repeated-queue", test_stats_repeated_queue_entries);
     g_test_add_func("/task-manager/stats/after-deletion", test_stats_after_deletion);
 
