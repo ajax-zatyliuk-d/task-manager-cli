@@ -25,9 +25,11 @@ static gboolean parse_id(const gchar *word, guint *id, GError **error)
     return TRUE;
 }
 
+static gchar *parse_tag(gchar *word) { return word != NULL && word[0] == '#' ? word + 1 : NULL; }
+
 static gchar *const *find_first_tag(gchar *const *words)
 {
-    while (*words != NULL && (*words)[0] != '#') {
+    while (*words != NULL && parse_tag(*words) == NULL) {
         ++words;
     }
 
@@ -37,12 +39,13 @@ static gchar *const *find_first_tag(gchar *const *words)
 static gboolean parse_add_tags(gchar *const *first_tag, GPtrArray *tags, GError **error)
 {
     for (gchar *const *word = first_tag; *word != NULL; ++word) {
-        if ((*word)[0] != '#') {
+        gchar *tag = parse_tag(*word);
+        if (tag == NULL) {
             g_set_error(error, CLI_ERROR, CLI_ERROR_USAGE, "expected a tag, got: %s", *word);
             return FALSE;
         }
 
-        g_ptr_array_add(tags, *word + 1);
+        g_ptr_array_add(tags, tag);
     }
 
     return TRUE;
@@ -129,12 +132,12 @@ static void cmd_tag(TaskManager *manager, gchar *const *args, GString *output, G
         return;
     }
 
-    if (args[1][0] != '#') {
+    const gchar *tag = parse_tag(args[1]);
+    if (tag == NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: tag <id> <#tag>");
         return;
     }
 
-    const gchar *tag = args[1] + 1;
     if (!task_manager_tag_task(manager, id, tag, error)) {
         return;
     }
@@ -155,12 +158,12 @@ static void cmd_untag(TaskManager *manager, gchar *const *args, GString *output,
         return;
     }
 
-    if (args[1][0] != '#') {
+    const gchar *tag = parse_tag(args[1]);
+    if (tag == NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: untag <id> <#tag>");
         return;
     }
 
-    const gchar *tag = args[1] + 1;
     if (!task_manager_untag_task(manager, id, tag, error)) {
         return;
     }
@@ -200,12 +203,18 @@ static void append_task_list(GString *output, const GPtrArray *tasks)
 
 static void cmd_find(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
-    if (args[0] == NULL || args[1] != NULL || args[0][0] != '#') {
+    if (args[0] == NULL || args[1] != NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: find <#tag>");
         return;
     }
 
-    GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, args[0] + 1, error);
+    const gchar *tag = parse_tag(args[0]);
+    if (tag == NULL) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: find <#tag>");
+        return;
+    }
+
+    GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, tag, error);
     if (tasks == NULL) {
         return;
     }
