@@ -1059,7 +1059,7 @@ int main(int argc, char **argv)
     g_test_add_data_func("/cli/basic/spaces", "    ", test_cli_basic);
     g_test_add_data_func("/cli/basic/quit", "quit", test_cli_basic);
     g_test_add_data_func("/cli/basic/unknown", "unknown", test_cli_basic);
-    
+
     g_test_add_func("/cli/numeric-tokens", test_cli_numeric_tokens);
     g_test_add_func("/cli/tag-lifecycle", test_cli_tag_lifecycle);
 
