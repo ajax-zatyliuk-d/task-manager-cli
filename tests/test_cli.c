@@ -129,89 +129,73 @@ static void test_cli_add(void)
     task_manager_free(manager);
 }
 
-static void test_cli_add_invalid(void)
+static void test_cli_add_syntax_errors(void)
 {
-    TaskManager *manager = task_manager_new();
-    g_assert_nonnull(manager);
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    const gchar *commands[] = {"add", "add 5", "add x title", "add 5 title #ok word", "add 5 #tag"};
 
-    CliStatus status;
-    GError *error = NULL;
-    // GPtrArray *history;
-    GString *output = g_string_new(NULL);
+    for (gsize i = 0; i < G_N_ELEMENTS(commands); ++i) {
+        g_test_message("%s", commands[i]);
+        g_autoptr(GError) error = NULL;
+        const CliStatus status = cli_execute_line(manager, commands[i], output, &error);
+        g_assert_cmpuint(status, ==, CLI_CONTINUE);
+        g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
+        g_assert_cmpstr(output->str, ==, "");
+        g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 0);
+    }
+}
 
-    status = cli_execute_line(manager, "add", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-    g_clear_error(&error);
+static void test_cli_add_domain_errors(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    const struct
+    {
+        const gchar *command;
+        TaskManagerError code;
+    } cases[] = {
+        {"add 11 title", TM_ERROR_INVALID_PRIORITY},
+        {"add 5 title #ok #Bad", TM_ERROR_INVALID_TAG},
+        {"add 5 b #y #y", TM_ERROR_DUPLICATE_TAG},
+    };
 
-    status = cli_execute_line(manager, "add 5", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-    g_clear_error(&error);
+    for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {
+        g_test_message("%s", cases[i].command);
+        g_autoptr(GError) error = NULL;
+        const CliStatus status = cli_execute_line(manager, cases[i].command, output, &error);
+        g_assert_cmpuint(status, ==, CLI_CONTINUE);
+        g_assert_error(error, TM_ERROR, cases[i].code);
+        g_assert_cmpstr(output->str, ==, "");
+        const TaskManagerStats stats = task_manager_get_stats(manager);
+        g_assert_cmpuint(stats.tasks, ==, 0);
+        g_assert_cmpuint(stats.unique_tags, ==, 0);
+    }
 
-    status = cli_execute_line(manager, "add x title", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-    g_clear_error(&error);
-
-    status = cli_execute_line(manager, "add 11 title", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY);
-    g_clear_error(&error);
-
-    status = cli_execute_line(manager, "add 5 title #ok #Bad", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
-    g_clear_error(&error);
-
-    const TaskManagerStats stats_after_invalid_tag = task_manager_get_stats(manager);
-    g_assert_cmpuint(stats_after_invalid_tag.tasks, ==, 0);
-    g_assert_cmpuint(stats_after_invalid_tag.unique_tags, ==, 0);
-
-    status = cli_execute_line(manager, "add 5 title #ok word", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-    g_clear_error(&error);
-
-    status = cli_execute_line(manager, "add 5 #tag", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-    g_clear_error(&error);
-
-    TaskManagerStats stats = task_manager_get_stats(manager);
-    g_assert_cmpuint(stats.tasks, ==, 0);
-    g_assert_cmpuint(output->len, ==, 0);
-
-    status = cli_execute_line(manager, "add 5 b #y #y", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG);
-    g_clear_error(&error);
-    g_assert_cmpstr(output->str, ==, "");
-
-    stats = task_manager_get_stats(manager);
-    g_assert_cmpuint(stats.tasks, ==, 0);
-    g_assert_cmpuint(stats.unique_tags, ==, 0);
-
-    status = cli_execute_line(manager, "add 5 b #y", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_autoptr(GError) error = NULL;
+    g_assert_cmpuint(cli_execute_line(manager, "add 5 b #y", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "added task 1\n");
+}
 
+static void test_cli_add_id_exhausted(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    g_autoptr(GError) error = NULL;
+
+    g_assert_cmpuint(cli_execute_line(manager, "add 5 b #y", output, &error), ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_assert_cmpstr(output->str, ==, "added task 1\n");
     g_string_truncate(output, 0);
     task_manager_set_next_id_for_test(manager, G_MAXUINT);
 
-    status = cli_execute_line(manager, "add 5 overflow #new", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_cmpuint(cli_execute_line(manager, "add 5 overflow #new", output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED);
-    g_clear_error(&error);
     g_assert_cmpstr(output->str, ==, "");
-
-    stats = task_manager_get_stats(manager);
+    const TaskManagerStats stats = task_manager_get_stats(manager);
     g_assert_cmpuint(stats.tasks, ==, 1);
     g_assert_cmpuint(stats.unique_tags, ==, 1);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_del(void)
@@ -1052,7 +1036,9 @@ int main(int argc, char **argv)
     g_test_add_func("/cli/basic", test_cli_base);
 
     g_test_add_func("/cli/add", test_cli_add);
-    g_test_add_func("/cli/add-invalid", test_cli_add_invalid);
+    g_test_add_func("/cli/add/syntax-errors", test_cli_add_syntax_errors);
+    g_test_add_func("/cli/add/domain-errors", test_cli_add_domain_errors);
+    g_test_add_func("/cli/add/id-exhausted", test_cli_add_id_exhausted);
 
     g_test_add_func("/cli/del", test_cli_del);
     g_test_add_func("/cli/del-invalid", test_cli_del_invalid);

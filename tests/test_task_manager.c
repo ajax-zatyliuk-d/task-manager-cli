@@ -615,10 +615,12 @@ static void test_top(void)
     g_assert_nonnull(manager);
 
     guint task1_id = task_manager_add_task(manager, title1, medium_priority, &error);
-    guint task2_id = task_manager_add_task(manager, title2, low_priority, &error);
-    guint task3_id = task_manager_add_task(manager, title3, low_priority, &error);
-    guint task4_id = task_manager_add_task(manager, title4, high_priority, &error);
     g_assert_no_error(error);
+    guint task2_id = task_manager_add_task(manager, title2, low_priority, &error);
+    g_assert_no_error(error);
+    guint task3_id = task_manager_add_task(manager, title3, low_priority, &error);
+    g_assert_no_error(error);
+    guint task4_id = task_manager_add_task(manager, title4, high_priority, &error);
 
     GPtrArray *all_tasks = task_manager_top_tasks(manager, 4);
     g_assert_nonnull(all_tasks);
@@ -667,9 +669,10 @@ static void test_run(void)
     g_assert_no_error(error);
 
     guint task1_id = task_manager_add_task(manager, title1, priority5, &error);
+    g_assert_no_error(error);
     guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
+    g_assert_no_error(error);
     guint task3_id = task_manager_add_task(manager, title3, priority2, &error);
-
     g_assert_no_error(error);
 
     gboolean result = FALSE;
