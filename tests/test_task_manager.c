@@ -520,8 +520,8 @@ static void test_find_by_tag(void)
     g_assert_no_error(error);
     g_assert_nonnull(tasks);
     g_assert_cmpint(tasks->len, ==, 2);
-    g_assert_true(g_ptr_array_index(tasks, 0) == task1);
-    g_assert_true(g_ptr_array_index(tasks, 1) == task2);
+    g_assert_true(g_ptr_array_find(tasks, task1, NULL));
+    g_assert_true(g_ptr_array_find(tasks, task2, NULL));
     g_ptr_array_unref(tasks);
 
     GPtrArray *other_tasks = task_manager_find_tasks_by_tag(manager, tag_other);
@@ -551,7 +551,8 @@ static void test_find_by_tag(void)
     g_assert_no_error(error);
     g_assert_nonnull(same_tasks);
     g_assert_cmpint(same_tasks->len, ==, 2);
-    g_assert_true((g_ptr_array_index(same_tasks, 0) == task1) && (g_ptr_array_index(same_tasks, 1) == task2));
+    g_assert_true(g_ptr_array_find(same_tasks, task1, NULL));
+    g_assert_true(g_ptr_array_find(same_tasks, task2, NULL));
     g_ptr_array_unref(same_tasks);
 
     task_manager_free(manager);
