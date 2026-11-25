@@ -207,8 +207,23 @@ static void test_cli_del(void)
     task_manager_free(manager);
 }
 
-static void test_cli_del_invalid(void)
+typedef struct
 {
+    const gchar *command;
+    gboolean unknown_id;
+} DelInvalidCase;
+
+static const DelInvalidCase del_invalid_cases[] = {
+    {"del", FALSE},
+    {"del 1 2", FALSE},
+    {"del abc", FALSE},
+    {"del 0", FALSE},
+    {"del 999", TRUE},
+};
+
+static void test_cli_del_invalid(gconstpointer data)
+{
+    const DelInvalidCase *test_case = data;
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -219,35 +234,22 @@ static void test_cli_del_invalid(void)
     g_assert_no_error(error);
     g_assert_cmpuint(id, ==, 1);
 
-    const struct
-    {
-        const gchar *command;
-        GQuark domain;
-        gint code;
-    } cases[] = {
-        {"del", CLI_ERROR, CLI_ERROR_USAGE},
-        {"del 1 2", CLI_ERROR, CLI_ERROR_USAGE},
-        {"del abc", CLI_ERROR, CLI_ERROR_USAGE},
-        {"del 0", CLI_ERROR, CLI_ERROR_USAGE},
-        {"del 999", TM_ERROR, TM_ERROR_TASK_NOT_FOUND},
-    };
-
-    for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {
-        g_test_message("%s", cases[i].command);
-
-        CliStatus status = cli_execute_line(manager, cases[i].command, output, &error);
-        g_assert_cmpuint(status, ==, CLI_CONTINUE);
-        g_assert_error(error, cases[i].domain, cases[i].code);
-        g_clear_error(&error);
-        g_assert_cmpstr(output->str, ==, "");
-
-        TaskManagerStats stats = task_manager_get_stats(manager);
-        g_assert_cmpuint(stats.tasks, ==, 1);
-
-        const Task *task = task_manager_find_task_by_id(manager, id, &error);
-        g_assert_no_error(error);
-        g_assert_nonnull(task);
+    CliStatus status = cli_execute_line(manager, test_case->command, output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    if (test_case->unknown_id) {
+        g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
+    } else {
+        g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
     }
+    g_clear_error(&error);
+    g_assert_cmpstr(output->str, ==, "");
+
+    TaskManagerStats stats = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats.tasks, ==, 1);
+
+    const Task *task = task_manager_find_task_by_id(manager, id, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(task);
 
     g_string_free(output, TRUE);
     task_manager_free(manager);
@@ -1048,7 +1050,11 @@ int main(int argc, char **argv)
     g_test_add_func("/cli/add/id-exhausted", test_cli_add_id_exhausted);
 
     g_test_add_func("/cli/del/success", test_cli_del);
-    g_test_add_func("/cli/del/invalid", test_cli_del_invalid);
+    g_test_add_data_func("/cli/del/invalid/missing-id", &del_invalid_cases[0], test_cli_del_invalid);
+    g_test_add_data_func("/cli/del/invalid/extra-argument", &del_invalid_cases[1], test_cli_del_invalid);
+    g_test_add_data_func("/cli/del/invalid/non-numeric-id", &del_invalid_cases[2], test_cli_del_invalid);
+    g_test_add_data_func("/cli/del/invalid/zero-id", &del_invalid_cases[3], test_cli_del_invalid);
+    g_test_add_data_func("/cli/del/unknown-id", &del_invalid_cases[4], test_cli_del_invalid);
 
     g_test_add_func("/cli/tag/lifecycle", test_cli_tag_lifecycle);
     g_test_add_func("/cli/tag/success", test_cli_tag);
