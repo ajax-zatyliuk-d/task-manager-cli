@@ -31,7 +31,7 @@ static void append_task_list(GString *output, const GPtrArray *tasks)
     }
 }
 
-static gchar *strip_tag_prefix(gchar *word) { return word != NULL && word[0] == '#' ? word + 1 : NULL; }
+static const gchar *strip_tag_prefix(const gchar *word) { return word != NULL && word[0] == '#' ? word + 1 : NULL; }
 
 static gchar *const *find_first_tag_token(gchar *const *words)
 {
@@ -58,13 +58,14 @@ static gboolean parse_id(const gchar *word, guint *id, GError **error)
 static gboolean parse_add_tags(gchar *const *first_tag, GPtrArray *tags, GError **error)
 {
     for (gchar *const *word = first_tag; *word != NULL; ++word) {
-        gchar *tag = strip_tag_prefix(*word);
+        const gchar *tag = strip_tag_prefix(*word);
         if (tag == NULL) {
             g_set_error(error, CLI_ERROR, CLI_ERROR_USAGE, "expected a tag, got: %s", *word);
             return FALSE;
         }
 
-        g_ptr_array_add(tags, tag);
+        // the array borrows tag strings; it does not modify or free them.
+        g_ptr_array_add(tags, (gpointer)tag);
     }
 
     return TRUE;
