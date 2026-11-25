@@ -30,61 +30,44 @@ static void test_cli_basic(gconstpointer data)
     }
 }
 
-static void test_cli_add(void)
+typedef struct
 {
-    TaskManager *manager = task_manager_new();
-    g_assert_nonnull(manager);
+    const gchar *command;
+    const gchar *title;
+    const gchar *first_tag;
+    const gchar *second_tag;
+} AddCase;
 
-    CliStatus status;
-    GError *error = NULL;
-    GString *output = g_string_new(NULL);
-    const gchar *cmd1 = "add 5 buy milk #home #shop";
-    const gchar *cmd2 = "add 5 title";
-    const gchar *cmd3 = "add  5   buy   milk  #a";
+static void test_cli_add(gconstpointer data)
+{
+    const AddCase *test_case = data;
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
 
-    // cmd1 with 2 tags
-    status = cli_execute_line(manager, cmd1, output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(manager, test_case->command, output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "added task 1\n");
 
-    const Task *task1 = task_manager_find_task_by_id(manager, 1, &error);
+    const Task *task = task_manager_find_task_by_id(manager, 1, &error);
     g_assert_no_error(error);
-    g_assert_cmpstr(task_get_title(task1), ==, "buy milk");
-    g_assert_cmpuint(task_get_tag_count(task1), ==, 2);
-    g_assert_cmpint(task_get_priority(task1), ==, 5);
-
-    g_string_truncate(output, 0);
-
-    // cmd2 without tags
-    status = cli_execute_line(manager, cmd2, output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "added task 2\n");
-
-    const Task *task2 = task_manager_find_task_by_id(manager, 2, &error);
-    g_assert_no_error(error);
-    g_assert_cmpstr(task_get_title(task2), ==, "title");
-    g_assert_cmpuint(task_get_tag_count(task2), ==, 0);
-    g_assert_cmpint(task_get_priority(task2), ==, 5);
-
-    g_string_truncate(output, 0);
-
-    // cmd3 with tag
-    status = cli_execute_line(manager, cmd3, output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "added task 3\n");
-
-    const Task *task3 = task_manager_find_task_by_id(manager, 3, &error);
-    g_assert_no_error(error);
-    g_assert_cmpstr(task_get_title(task3), ==, "buy milk");
-    g_assert_cmpuint(task_get_tag_count(task3), ==, 1);
-    g_assert_cmpint(task_get_priority(task3), ==, 5);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
+    g_assert_nonnull(task);
+    g_assert_cmpstr(task_get_title(task), ==, test_case->title);
+    g_assert_cmpint(task_get_priority(task), ==, 5);
+    g_assert_cmpuint(task_get_tag_count(task), ==, (test_case->first_tag != NULL) + (test_case->second_tag != NULL));
+    if (test_case->first_tag != NULL) {
+        g_assert_cmpstr(task_get_tag(task, 0), ==, test_case->first_tag);
+    }
+    if (test_case->second_tag != NULL) {
+        g_assert_cmpstr(task_get_tag(task, 1), ==, test_case->second_tag);
+    }
 }
+
+static const AddCase add_cases[] = {
+    {"add 5 buy milk", "buy milk", NULL, NULL},
+    {"add 5 title #home #shop", "title", "home", "shop"},
+    {"add  5   buy   milk  #a", "buy milk", "a", NULL},
+};
 
 static void test_cli_add_syntax_errors(void)
 {
@@ -1063,7 +1046,9 @@ int main(int argc, char **argv)
     g_test_add_func("/cli/numeric-tokens", test_cli_numeric_tokens);
     g_test_add_func("/cli/tag-lifecycle", test_cli_tag_lifecycle);
 
-    g_test_add_func("/cli/add", test_cli_add);
+    g_test_add_data_func("/cli/add/multiword-title", &add_cases[0], test_cli_add);
+    g_test_add_data_func("/cli/add/multiple-tags", &add_cases[1], test_cli_add);
+    g_test_add_data_func("/cli/add/extra-spaces", &add_cases[2], test_cli_add);
     g_test_add_func("/cli/add/syntax-errors", test_cli_add_syntax_errors);
     g_test_add_func("/cli/add/domain-errors", test_cli_add_domain_errors);
     g_test_add_func("/cli/add/id-exhausted", test_cli_add_id_exhausted);
