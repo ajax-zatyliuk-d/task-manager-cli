@@ -158,7 +158,7 @@ static void test_add_with_tags_atomic(gconstpointer data)
     const gboolean duplicate = GPOINTER_TO_INT(data);
     g_ptr_array_add(tags, duplicate ? "new" : "Bad");
     g_assert_cmpuint(task_manager_add_task_with_tags(manager, "invalid", 9, tags, &error), ==, 0);
-    const TaskError expected_error = duplicate ? TASK_ERROR_DUPLICATE_TAG : TASK_ERROR_INVALID_TAG;
+    const gint expected_error = duplicate ? TASK_ERROR_DUPLICATE_TAG : TASK_ERROR_INVALID_TAG;
     g_assert_error(error, TASK_ERROR, expected_error);
     g_clear_error(&error);
     g_assert_cmpuint(task_manager_add_task_with_tags(manager, "invalid", 9, tags, NULL), ==, 0);

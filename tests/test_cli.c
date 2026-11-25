@@ -153,7 +153,7 @@ static void test_cli_add_syntax_errors(gconstpointer data)
 typedef struct
 {
     const gchar *command;
-    TaskError code;
+    gint code;
 } AddErrorCase;
 
 static const AddErrorCase add_error_cases[] = {
