@@ -181,7 +181,7 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
     g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(id), task);
     task_manager_index_task(manager, task);
     g_steal_pointer(&task);
-    
+
     manager->next_id = id + 1;
     return id;
 }
