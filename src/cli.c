@@ -31,6 +31,17 @@ static void append_task_list(GString *output, const GPtrArray *tasks)
     }
 }
 
+static gchar *strip_tag_prefix(gchar *word) { return word != NULL && word[0] == '#' ? word + 1 : NULL; }
+
+static gchar *const *find_first_tag_token(gchar *const *words)
+{
+    while (*words != NULL && strip_tag_prefix(*words) == NULL) {
+        ++words;
+    }
+
+    return words;
+}
+
 static gboolean parse_id(const gchar *word, guint *id, GError **error)
 {
     guint64 value;
@@ -44,21 +55,10 @@ static gboolean parse_id(const gchar *word, guint *id, GError **error)
     return TRUE;
 }
 
-static gchar *parse_tag(gchar *word) { return word != NULL && word[0] == '#' ? word + 1 : NULL; }
-
-static gchar *const *find_first_tag(gchar *const *words)
-{
-    while (*words != NULL && parse_tag(*words) == NULL) {
-        ++words;
-    }
-
-    return words;
-}
-
 static gboolean parse_add_tags(gchar *const *first_tag, GPtrArray *tags, GError **error)
 {
     for (gchar *const *word = first_tag; *word != NULL; ++word) {
-        gchar *tag = parse_tag(*word);
+        gchar *tag = strip_tag_prefix(*word);
         if (tag == NULL) {
             g_set_error(error, CLI_ERROR, CLI_ERROR_USAGE, "expected a tag, got: %s", *word);
             return FALSE;
@@ -85,7 +85,7 @@ static gboolean parse_add_args(gchar *const *args, gint *priority, GString *titl
     }
 
     gchar *const *const title_words = args + 1;
-    gchar *const *const first_tag = find_first_tag(title_words);
+    gchar *const *const first_tag = find_first_tag_token(title_words);
     if (first_tag == title_words) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "missing task title");
         return FALSE;
@@ -150,7 +150,7 @@ static void cmd_tag(TaskManager *manager, gchar *const *args, GString *output, G
         return;
     }
 
-    const gchar *tag = parse_tag(args[1]);
+    const gchar *tag = strip_tag_prefix(args[1]);
     if (tag == NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: tag <id> <#tag>");
         return;
@@ -175,7 +175,7 @@ static void cmd_untag(TaskManager *manager, gchar *const *args, GString *output,
         return;
     }
 
-    const gchar *tag = parse_tag(args[1]);
+    const gchar *tag = strip_tag_prefix(args[1]);
     if (tag == NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: untag <id> <#tag>");
         return;
@@ -232,7 +232,7 @@ static void cmd_find(TaskManager *manager, gchar *const *args, GString *output, 
         return;
     }
 
-    const gchar *tag = parse_tag(args[0]);
+    const gchar *tag = strip_tag_prefix(args[0]);
     if (tag == NULL) {
         g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: find <#tag>");
         return;
