@@ -54,6 +54,57 @@ static void test_take_task(void)
     g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 0);
 }
 
+static void test_add_with_tags_atomic(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GPtrArray) tags = g_ptr_array_new();
+    g_ptr_array_add(tags, "existing");
+    const guint first = task_manager_add_task_with_tags(manager, "first", 5, tags, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(first, ==, 1);
+    g_assert_true(task_manager_enqueue_task(manager, first, &error));
+    g_assert_no_error(error);
+
+    g_ptr_array_set_size(tags, 0);
+    g_ptr_array_add(tags, "new");
+    g_ptr_array_add(tags, "another");
+    g_ptr_array_add(tags, "Bad");
+    g_assert_cmpuint(task_manager_add_task_with_tags(manager, "invalid", 9, tags, &error), ==, 0);
+    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
+    g_clear_error(&error);
+    g_assert_cmpuint(task_manager_add_task_with_tags(manager, "invalid", 9, tags, NULL), ==, 0);
+
+    g_ptr_array_index(tags, 2) = "new";
+    g_assert_cmpuint(task_manager_add_task_with_tags(manager, "duplicate", 9, tags, &error), ==, 0);
+    g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG);
+    g_clear_error(&error);
+
+    const TaskManagerStats stats = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats.tasks, ==, 1);
+    g_assert_cmpuint(stats.unique_tags, ==, 1);
+    g_assert_cmpuint(stats.queue_length, ==, 1);
+    g_autoptr(GPtrArray) missing = task_manager_find_tasks_by_tag(manager, "new", &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(missing->len, ==, 0);
+    g_autoptr(GPtrArray) existing = task_manager_find_tasks_by_tag(manager, "existing", &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(existing->len, ==, 1);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(existing, 0)), ==, first);
+    g_autoptr(GPtrArray) top = task_manager_top_tasks(manager, 10);
+    g_assert_cmpuint(top->len, ==, 1);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(top, 0)), ==, first);
+
+    g_ptr_array_set_size(tags, 2);
+    const guint second = task_manager_add_task_with_tags(manager, "second", 9, tags, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(second, ==, 2);
+    g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "new", &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(matches->len, ==, 1);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(matches, 0)), ==, second);
+}
+
 static void test_add_find(void)
 {
     GError *error = NULL;
@@ -1077,6 +1128,7 @@ int main(int argc, char **argv)
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/task-manager/add-find", test_add_find);
+    g_test_add_func("/task-manager/add-with-tags/atomic", test_add_with_tags_atomic);
     g_test_add_func("/task-manager/take-task", test_take_task);
     g_test_add_func("/task-manager/add-invalid", test_add_invalid);
     g_test_add_func("/task-manager/invalid-priority", test_invalid_priority);

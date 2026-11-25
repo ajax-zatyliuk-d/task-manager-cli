@@ -183,20 +183,11 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
     while (id != 0 && id != G_MAXUINT && g_hash_table_contains(manager->tasks_by_id, GUINT_TO_POINTER(id))) {
         ++id;
     }
-    g_autoptr(Task) task = task_new(id, title, priority, &task_error);
+    g_autoptr(Task) task = task_new_with_tags(id, title, priority, tags, &task_error);
     if (task == NULL) {
         propagate_task_error(error, task_error);
         return 0;
     }
-    if (tags != NULL) {
-        for (guint i = 0; i < tags->len; ++i) {
-            if (!task_add_tag(task, g_ptr_array_index(tags, i), &task_error)) {
-                propagate_task_error(error, task_error);
-                return 0;
-            }
-        }
-    }
-
     if (id == 0 || id == G_MAXUINT) {
         g_set_error_literal(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED, "no more task IDs available");
         return 0;
