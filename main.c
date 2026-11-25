@@ -28,7 +28,8 @@ static void setup_terminal(void)
     }
 }
 
-static gboolean execute_and_print_line(TaskManager *manager, const gchar *line, GString *output, CliStatus *status)
+static gboolean execute_and_print_line(
+    TaskManager *manager, const gchar *line, GString *output, CliStatus *status, gboolean *had_command_error)
 {
     g_autoptr(GError) error = NULL;
     g_string_truncate(output, 0);
@@ -42,6 +43,7 @@ static gboolean execute_and_print_line(TaskManager *manager, const gchar *line, 
     }
 
     if (error != NULL) {
+        *had_command_error = TRUE;
         g_printerr("error: %s\n", error->message);
     }
 
@@ -55,6 +57,7 @@ int main(void)
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(GIOChannel) channel = g_io_channel_unix_new(STDIN_FILENO);
+    gboolean had_command_error = FALSE;
 
     while (TRUE) {
         g_autofree gchar *line = NULL;
@@ -64,17 +67,17 @@ int main(void)
         switch (read_status) {
             case G_IO_STATUS_NORMAL: {
                 CliStatus status;
-                if (!execute_and_print_line(manager, line, output, &status)) {
+                if (!execute_and_print_line(manager, line, output, &status, &had_command_error)) {
                     return 1;
                 }
                 if (status == CLI_QUIT) {
-                    return 0;
+                    return had_command_error ? 1 : 0;
                 }
 
                 break;
             }
             case G_IO_STATUS_EOF:
-                return 0;
+                return had_command_error ? 1 : 0;
             case G_IO_STATUS_ERROR:
                 g_printerr("error: %s\n", error->message);
                 return 1;
