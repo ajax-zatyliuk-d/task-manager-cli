@@ -437,6 +437,31 @@ static void test_find_by_tag(void)
     task_manager_free(manager);
 }
 
+static void test_find_by_tag_returns_independent_array(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    const guint id = task_manager_add_task(manager, "task", 5, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(id, ==, 1);
+    g_assert_true(task_manager_tag_task(manager, id, "work", &error));
+    g_assert_no_error(error);
+
+    g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work", &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(matches);
+    g_assert_cmpuint(matches->len, ==, 1);
+    g_ptr_array_set_size(matches, 0);
+
+    g_autoptr(GPtrArray) found_again = task_manager_find_tasks_by_tag(manager, "work", &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(found_again);
+    g_assert_cmpuint(found_again->len, ==, 1);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(found_again, 0)), ==, id);
+    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 1);
+    g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 1);
+}
+
 static void test_find_by_invalid_tag(void)
 {
     GError *error = NULL;
@@ -1107,6 +1132,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/tag/shared", test_tag_shared_by_two_tasks);
     g_test_add_func("/task-manager/tag/invalid", test_invalid_tag);
     g_test_add_func("/task-manager/tag/find-valid", test_find_by_tag);
+    g_test_add_func("/task-manager/tag/find-independent-array", test_find_by_tag_returns_independent_array);
     g_test_add_func("/task-manager/tag/find-invalid", test_find_by_invalid_tag);
 
     g_test_add_func("/task-manager/untag/shared", test_untag_shared_tag);
