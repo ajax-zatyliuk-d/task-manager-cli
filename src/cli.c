@@ -53,9 +53,15 @@ static gboolean parse_add_tags(gchar *const *first_tag, GPtrArray *tags, GError 
 
 static gboolean parse_add_args(gchar *const *args, gint *priority, GString *title, GPtrArray *tags, GError **error)
 {
+    const gchar *usage = "usage: add <priority> <title> [#tag ...]";
+    if (args[0] == NULL) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, usage);
+        return FALSE;
+    }
+
     gint64 parsed_priority;
-    if (args[0] == NULL || !g_ascii_string_to_signed(args[0], 10, G_MININT, G_MAXINT, &parsed_priority, NULL)) {
-        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: add <priority> <title> [#tag ...]");
+    if (!g_ascii_string_to_signed(args[0], 10, G_MININT, G_MAXINT, &parsed_priority, NULL)) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, usage);
         return FALSE;
     }
 
