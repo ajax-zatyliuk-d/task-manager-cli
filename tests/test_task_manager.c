@@ -233,7 +233,7 @@ static void test_invalid_priority(void)
     task_manager_free(manager);
 }
 
-static void test_not_found(void)
+static void test_find_by_id_reports_missing_task(void)
 {
     GError *error = NULL;
 
@@ -647,7 +647,7 @@ static void test_invalid_untag(void)
     task_manager_free(manager);
 }
 
-static void test_delete_by_valid_id(void)
+static void test_delete_removes_task_from_indexes(void)
 {
     GError *error = NULL;
     const gchar *tag = "tag";
@@ -844,7 +844,7 @@ static void test_run_removes_indexes(void)
     g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 0);
 }
 
-static void test_run_duplicated(void)
+static void test_run_removes_duplicate_queue_entries(void)
 {
     GError *error = NULL;
     const gchar *title1 = "cmd1";
@@ -931,7 +931,7 @@ static void test_run_duplicated(void)
     task_manager_free(manager);
 }
 
-static void test_run_with_delete(void)
+static void test_delete_removes_all_queue_entries(void)
 {
     GError *error = NULL;
     const gchar *title1 = "cmd1";
@@ -1125,7 +1125,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/add-invalid", test_add_id_exhausted);
     g_test_add_func("/task-manager/add/exhausted-before-validation", test_add_exhausted_before_validation);
     g_test_add_func("/task-manager/invalid-priority", test_invalid_priority);
-    g_test_add_func("/task-manager/not-found", test_not_found);
+    g_test_add_func("/task-manager/not-found", test_find_by_id_reports_missing_task);
 
     g_test_add_func("/task-manager/tag/add", test_tag_adds_tag);
     g_test_add_func("/task-manager/tag/duplicate", test_tag_duplicate_leaves_task_unchanged);
@@ -1142,7 +1142,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/untag/borrowed-tag", test_untag_borrowed_tag);
     g_test_add_func("/task-manager/untag/invalid", test_invalid_untag);
 
-    g_test_add_func("/task-manager/delete/indexes", test_delete_by_valid_id);
+    g_test_add_func("/task-manager/delete/indexes", test_delete_removes_task_from_indexes);
     g_test_add_func("/task-manager/delete/unknown", test_delete_unknown_id);
     g_test_add_func("/task-manager/delete/twice", test_delete_twice);
     g_test_add_func("/task-manager/delete/id-not-reused", test_delete_does_not_reuse_id);
@@ -1157,8 +1157,8 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/run/fifo", test_run_fifo);
     g_test_add_func("/task-manager/run/indexes", test_run_removes_indexes);
     g_test_add_func("/task-manager/run/transfer", test_run_transfer);
-    g_test_add_func("/task-manager/run/duplicated", test_run_duplicated);
-    g_test_add_func("/task-manager/run/with-delete", test_run_with_delete);
+    g_test_add_func("/task-manager/run/duplicated", test_run_removes_duplicate_queue_entries);
+    g_test_add_func("/task-manager/run/with-delete", test_delete_removes_all_queue_entries);
 
     g_test_add_func("/task-manager/history/empty", test_history_empty);
     g_test_add_func("/task-manager/history/ignores-empty", test_history_ignores_empty);
