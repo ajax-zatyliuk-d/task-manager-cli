@@ -15,8 +15,6 @@ enum _TaskManagerError
     TM_ERROR_INVALID_TAG,
     TM_ERROR_DUPLICATE_TAG,
     TM_ERROR_ID_EXHAUSTED,
-    TM_ERROR_INVALID_ID,
-    TM_ERROR_DUPLICATE_ID,
 };
 
 struct _TaskManagerStats
@@ -85,23 +83,6 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
  *   %TM_ERROR_INVALID_PRIORITY, or %TM_ERROR_ID_EXHAUSTED.
  */
 guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, gint priority, const GPtrArray *tags, GError **error);
-
-/**
- * task_manager_take_task:
- * @manager: a task manager
- * @task: a caller-owned task
- * @error: (nullable): return location for a #GError, or %NULL
- *
- * Takes ownership on success. The caller must not modify or free the task
- * while it belongs to the manager. On failure, the caller retains ownership
- * and the manager is unchanged. IDs must be in 1..G_MAXUINT-1 and unique.
- * Automatic IDs skip IDs already in use. If @error is provided it must point
- * to %NULL.
- *
- * Returns: %TRUE on success, or %FALSE with %TM_ERROR_INVALID_ID or
- *   %TM_ERROR_DUPLICATE_ID if @error is provided
- */
-gboolean task_manager_take_task(TaskManager *manager, Task *task, GError **error);
 
 /**
  * task_manager_remove_task:

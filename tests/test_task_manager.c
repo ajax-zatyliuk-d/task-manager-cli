@@ -6,74 +6,18 @@
 
 #include <stddef.h>
 
-static void test_take_invalid_id(void)
+static void test_run_transfer(void)
 {
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GError) error = NULL;
-    g_autoptr(Task) invalid = task_new(0, "invalid", 5, &error);
+    const guint id = task_manager_add_task(manager, "first", 5, &error);
     g_assert_no_error(error);
-    g_assert_false(task_manager_take_task(manager, invalid, &error));
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_ID);
-    g_clear_error(&error);
-    g_assert_cmpstr(task_get_title(invalid), ==, "invalid");
-    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 0);
-}
-
-static void test_take_duplicate_id(void)
-{
-    g_autoptr(TaskManager) manager = task_manager_new();
-    g_autoptr(GError) error = NULL;
-    g_autoptr(Task) first = task_new(1, "first", 5, &error);
+    g_assert_true(task_manager_tag_task(manager, id, "work", &error));
     g_assert_no_error(error);
-    g_assert_true(task_manager_take_task(manager, first, &error));
+    const Task *original = task_manager_find_task_by_id(manager, id, &error);
     g_assert_no_error(error);
-    g_steal_pointer(&first);
-
-    g_autoptr(Task) duplicate = task_new(1, "duplicate", 9, &error);
-    g_assert_no_error(error);
-    g_assert_false(task_manager_take_task(manager, duplicate, &error));
-    g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_ID);
-    g_clear_error(&error);
-    g_assert_cmpstr(task_get_title(duplicate), ==, "duplicate");
-    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 1);
-    g_assert_true(task_set_priority(duplicate, 8, &error));
-    g_assert_no_error(error);
-
-    const guint generated = task_manager_add_task(manager, "second", 9, &error);
-    g_assert_no_error(error);
-    g_assert_cmpuint(generated, ==, 2);
-}
-
-static void test_take_indexed_task(void)
-{
-    g_autoptr(TaskManager) manager = task_manager_new();
-    g_autoptr(GError) error = NULL;
-    g_autoptr(Task) task = task_new(1, "first", 5, &error);
-    g_assert_no_error(error);
-    g_assert_true(task_add_tag(task, "work", &error));
-    g_assert_no_error(error);
-    g_assert_true(task_manager_take_task(manager, task, &error));
-    g_assert_no_error(error);
-    g_steal_pointer(&task);
-    g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work", &error);
-    g_assert_no_error(error);
-    g_assert_cmpuint(matches->len, ==, 1);
-    g_assert_cmpuint(task_get_id(g_ptr_array_index(matches, 0)), ==, 1);
-    g_autoptr(GPtrArray) top = task_manager_top_tasks(manager, 1);
-    g_assert_cmpuint(task_get_id(g_ptr_array_index(top, 0)), ==, 1);
-}
-
-static void test_take_run_transfer(void)
-{
-    g_autoptr(TaskManager) manager = task_manager_new();
-    g_autoptr(GError) error = NULL;
-    Task *original = task_new(1, "first", 5, &error);
-    g_assert_no_error(error);
-    g_assert_true(task_add_tag(original, "work", &error));
-    g_assert_no_error(error);
-    g_assert_true(task_manager_take_task(manager, original, &error));
-    g_assert_no_error(error);
-    g_assert_true(task_manager_enqueue_task(manager, 1, &error));
+    g_assert_nonnull(original);
+    g_assert_true(task_manager_enqueue_task(manager, id, &error));
     g_assert_no_error(error);
     g_autoptr(Task) returned = task_manager_run_next(manager);
     g_assert_nonnull(returned);
@@ -1160,10 +1104,6 @@ int main(int argc, char **argv)
 
     g_test_add_func("/task-manager/add-find", test_add_find);
     g_test_add_func("/task-manager/add-with-tags/atomic", test_add_with_tags_atomic);
-    g_test_add_func("/task-manager/take/invalid-id", test_take_invalid_id);
-    g_test_add_func("/task-manager/take/duplicate-id", test_take_duplicate_id);
-    g_test_add_func("/task-manager/take/indexed", test_take_indexed_task);
-    g_test_add_func("/task-manager/take/run-transfer", test_take_run_transfer);
     g_test_add_func("/task-manager/add-invalid", test_add_invalid);
     g_test_add_func("/task-manager/invalid-priority", test_invalid_priority);
     g_test_add_func("/task-manager/not-found", test_not_found);
@@ -1182,6 +1122,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/top", test_top);
 
     g_test_add_func("/task-manager/run", test_run);
+    g_test_add_func("/task-manager/run/transfer", test_run_transfer);
     g_test_add_func("/task-manager/run/duplicated", test_run_duplicated);
     g_test_add_func("/task-manager/run/with-delete", test_run_with_delete);
 

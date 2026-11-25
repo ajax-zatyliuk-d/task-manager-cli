@@ -160,22 +160,6 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
     return task_manager_add_task_with_tags(manager, title, priority, NULL, error);
 }
 
-gboolean task_manager_take_task(TaskManager *manager, Task *task, GError **error)
-{
-    const guint id = task_get_id(task);
-    if (id == 0 || id == G_MAXUINT) {
-        g_set_error(error, TM_ERROR, TM_ERROR_INVALID_ID, "invalid task ID %u", id);
-        return FALSE;
-    }
-    if (g_hash_table_contains(manager->tasks_by_id, GUINT_TO_POINTER(id))) {
-        g_set_error(error, TM_ERROR, TM_ERROR_DUPLICATE_ID, "task ID %u already exists", id);
-        return FALSE;
-    }
-    g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(id), task);
-    task_manager_index_task(manager, task);
-    return TRUE;
-}
-
 guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, gint priority, const GPtrArray *tags, GError **error)
 {
     GError *task_error = NULL;
@@ -183,6 +167,7 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
     while (id != 0 && id != G_MAXUINT && g_hash_table_contains(manager->tasks_by_id, GUINT_TO_POINTER(id))) {
         ++id;
     }
+
     g_autoptr(Task) task = task_new_with_tags(id, title, priority, tags, &task_error);
     if (task == NULL) {
         propagate_task_error(error, task_error);
@@ -192,10 +177,11 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
         g_set_error_literal(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED, "no more task IDs available");
         return 0;
     }
-    if (!task_manager_take_task(manager, task, error)) {
-        return 0;
-    }
+
+    g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(id), task);
+    task_manager_index_task(manager, task);
     g_steal_pointer(&task);
+    
     manager->next_id = id + 1;
     return id;
 }
