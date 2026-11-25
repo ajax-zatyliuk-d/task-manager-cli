@@ -162,22 +162,18 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
 
 guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, gint priority, const GPtrArray *tags, GError **error)
 {
-    GError *task_error = NULL;
-    guint id = manager->next_id;
-    while (id != 0 && id != G_MAXUINT && g_hash_table_contains(manager->tasks_by_id, GUINT_TO_POINTER(id))) {
-        ++id;
-    }
-
-    g_autoptr(Task) task = task_new_with_tags(id, title, priority, tags, &task_error);
-    if (task == NULL) {
-        propagate_task_error(error, task_error);
-        return 0;
-    }
+    const guint id = manager->next_id;
     if (id == 0 || id == G_MAXUINT) {
         g_set_error_literal(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED, "no more task IDs available");
         return 0;
     }
 
+    GError *task_error = NULL;
+    g_autoptr(Task) task = task_new_with_tags(id, title, priority, tags, &task_error);
+    if (task == NULL) {
+        propagate_task_error(error, task_error);
+        return 0;
+    }
     g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(id), task);
     task_manager_index_task(manager, task);
     g_steal_pointer(&task);

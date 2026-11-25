@@ -153,6 +153,32 @@ static void test_add_invalid(void)
     task_manager_free(manager);
 }
 
+static void test_add_exhausted_before_validation(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    const guint existing = task_manager_add_task(manager, "existing", 5, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(existing, ==, 1);
+    task_manager_set_next_id_for_test(manager, G_MAXUINT);
+
+    g_autoptr(GPtrArray) tags = g_ptr_array_new();
+    g_ptr_array_add(tags, "Bad");
+    g_assert_cmpuint(task_manager_add_task_with_tags(manager, "invalid", 0, tags, &error), ==, 0);
+    g_assert_error(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED);
+    g_clear_error(&error);
+    g_assert_cmpuint(task_manager_add_task_with_tags(manager, "invalid", 5, tags, &error), ==, 0);
+    g_assert_error(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED);
+    g_clear_error(&error);
+    g_assert_cmpuint(task_manager_add_task(manager, "invalid", 0, NULL), ==, 0);
+
+    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 1);
+    const Task *task = task_manager_find_task_by_id(manager, existing, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(task);
+    g_assert_cmpstr(task_get_title(task), ==, "existing");
+}
+
 static void test_invalid_priority(void)
 {
     GError *error = NULL;
@@ -1105,6 +1131,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/add-find", test_add_find);
     g_test_add_func("/task-manager/add-with-tags/atomic", test_add_with_tags_atomic);
     g_test_add_func("/task-manager/add-invalid", test_add_invalid);
+    g_test_add_func("/task-manager/add/exhausted-before-validation", test_add_exhausted_before_validation);
     g_test_add_func("/task-manager/invalid-priority", test_invalid_priority);
     g_test_add_func("/task-manager/not-found", test_not_found);
 

@@ -58,7 +58,8 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(TaskManager, task_manager_free);
  * @error: (nullable): return location for a #GError, or %NULL
  *
  * Creates a task and assigns it a unique ID. If @error is provided, it must
- * point to %NULL. Failure leaves the manager unchanged.
+ * point to %NULL. Failure leaves the manager unchanged. ID exhaustion is
+ * reported before validating task fields.
  *
  * Returns: the new ID, or 0 on failure. If @error is provided, failure sets
  *   %TM_ERROR_INVALID_PRIORITY or %TM_ERROR_ID_EXHAUSTED.
@@ -76,7 +77,7 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
  * Creates a task with copies of its initial tags. An empty array adds no tags.
  * Tags must be non-empty and contain only [a-z0-9_], with no duplicates.
  * If @error is provided, it must point to %NULL. Failure leaves the manager
- * unchanged.
+ * unchanged. ID exhaustion is reported before validating task fields.
  *
  * Returns: the new ID, or 0 on failure. If @error is provided, failure sets
  *   %TM_ERROR_INVALID_TAG, %TM_ERROR_DUPLICATE_TAG,
