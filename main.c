@@ -78,8 +78,9 @@ int main(void)
             case G_IO_STATUS_ERROR:
                 g_printerr("error: %s\n", error->message);
                 return 1;
-            default:
-                break;
+            case G_IO_STATUS_AGAIN:
+                g_printerr("error: nonblocking stdin is not supported\n");
+                return 1;
         }
     }
 }
