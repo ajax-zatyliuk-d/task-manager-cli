@@ -307,48 +307,38 @@ static void test_remove_does_not_reuse_id(void)
 static void test_remove_removes_all_queue_entries(void)
 {
     GError *error = NULL;
-    const gchar *title1 = "cmd1";
-    const gchar *title2 = "cmd2";
-
-    gint priority5 = 5;
-    gint priority2 = 2;
-
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
-    guint task1_id = task_manager_add_task(manager, title1, priority5, &error);
+    guint first_task_id = task_manager_add_task(manager, "first", 5, &error);
     g_assert_no_error(error);
-    g_assert_cmpuint(task1_id, !=, 0);
-    guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
+    g_assert_cmpuint(first_task_id, !=, 0);
+    guint second_task_id = task_manager_add_task(manager, "second", 2, &error);
     g_assert_no_error(error);
-    g_assert_cmpuint(task2_id, !=, 0);
+    g_assert_cmpuint(second_task_id, !=, 0);
 
-    gboolean result = FALSE;
-    result = task_manager_enqueue_task(manager, task1_id, &error);
+    g_assert_true(task_manager_enqueue_task(manager, first_task_id, &error));
     g_assert_no_error(error);
-    g_assert_true(result);
 
-    result = task_manager_enqueue_task(manager, task2_id, &error);
+    g_assert_true(task_manager_enqueue_task(manager, second_task_id, &error));
     g_assert_no_error(error);
-    g_assert_true(result);
 
-    result = task_manager_enqueue_task(manager, task1_id, &error);
+    g_assert_true(task_manager_enqueue_task(manager, first_task_id, &error));
     g_assert_no_error(error);
-    g_assert_true(result);
 
     Task *next_task = NULL;
     GPtrArray *top_tasks = NULL;
 
-    // Queue: task1, task2, task1. Deleting task1 leaves task2 as the next entry.
-    result = task_manager_remove_task(manager, task1_id, &error);
+    // Queue: first, second, first. Removing first leaves second as the next entry.
+    g_assert_true(task_manager_remove_task(manager, first_task_id, &error));
     g_assert_no_error(error);
-    g_assert_true(result);
 
     next_task = task_manager_extract_next_task(manager);
     g_assert_no_error(error);
-    g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
+    g_assert_nonnull(next_task);
+    g_assert_cmpuint(task_get_id(next_task), ==, second_task_id);
 
-    const Task *missing_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
+    const Task *missing_task2 = task_manager_find_task_by_id(manager, second_task_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
     g_assert_null(missing_task2);
@@ -906,44 +896,35 @@ static void test_run_transfer(void)
 static void test_run_removes_duplicate_queue_entries(void)
 {
     GError *error = NULL;
-    const gchar *title1 = "cmd1";
-    const gchar *title2 = "cmd2";
-
-    gint priority5 = 5;
-    gint priority2 = 2;
-
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
-    guint task1_id = task_manager_add_task(manager, title1, priority5, &error);
+    guint first_task_id = task_manager_add_task(manager, "first", 5, &error);
     g_assert_no_error(error);
-    g_assert_cmpuint(task1_id, !=, 0);
-    guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
+    g_assert_cmpuint(first_task_id, !=, 0);
+    guint second_task_id = task_manager_add_task(manager, "second", 2, &error);
     g_assert_no_error(error);
-    g_assert_cmpuint(task2_id, !=, 0);
+    g_assert_cmpuint(second_task_id, !=, 0);
 
-    gboolean result = FALSE;
-    result = task_manager_enqueue_task(manager, task1_id, &error);
+    g_assert_true(task_manager_enqueue_task(manager, first_task_id, &error));
     g_assert_no_error(error);
-    g_assert_true(result);
 
-    result = task_manager_enqueue_task(manager, task2_id, &error);
+    g_assert_true(task_manager_enqueue_task(manager, second_task_id, &error));
     g_assert_no_error(error);
-    g_assert_true(result);
 
-    result = task_manager_enqueue_task(manager, task1_id, &error);
+    g_assert_true(task_manager_enqueue_task(manager, first_task_id, &error));
     g_assert_no_error(error);
-    g_assert_true(result);
 
     Task *next_task = NULL;
     GPtrArray *top_tasks = NULL;
 
-    // Queue: task1, task2, task1. Running task1 also removes its second entry.
+    // Queue: first, second, first. Running first also removes its second entry.
     next_task = task_manager_extract_next_task(manager);
     g_assert_no_error(error);
-    g_assert_cmpuint(task_get_id(next_task), ==, task1_id);
+    g_assert_nonnull(next_task);
+    g_assert_cmpuint(task_get_id(next_task), ==, first_task_id);
 
-    const Task *missing_task1 = task_manager_find_task_by_id(manager, task1_id, &error);
+    const Task *missing_task1 = task_manager_find_task_by_id(manager, first_task_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
     g_assert_null(missing_task1);
@@ -951,17 +932,18 @@ static void test_run_removes_duplicate_queue_entries(void)
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);
     g_assert_cmpuint(top_tasks->len, ==, 1);
-    g_assert_cmpuint(task_get_id(g_ptr_array_index(top_tasks, 0)), !=, task1_id);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(top_tasks, 0)), !=, first_task_id);
 
     g_ptr_array_unref(top_tasks);
     task_free(next_task);
 
-    // task2 is next; the queue becomes empty after it runs.
+    // second is next; the queue becomes empty after it runs.
     next_task = task_manager_extract_next_task(manager);
     g_assert_no_error(error);
-    g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
+    g_assert_nonnull(next_task);
+    g_assert_cmpuint(task_get_id(next_task), ==, second_task_id);
 
-    const Task *missing_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
+    const Task *missing_task2 = task_manager_find_task_by_id(manager, second_task_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
     g_assert_null(missing_task2);
@@ -977,7 +959,7 @@ static void test_run_removes_duplicate_queue_entries(void)
     g_assert_no_error(error);
     g_assert_null(next_task);
 
-    const Task *missing_task1_again = task_manager_find_task_by_id(manager, task1_id, &error);
+    const Task *missing_task1_again = task_manager_find_task_by_id(manager, first_task_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
     g_assert_null(missing_task1_again);
