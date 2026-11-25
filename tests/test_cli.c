@@ -1030,10 +1030,67 @@ static void test_cli_stats(void)
     task_manager_free(manager);
 }
 
+static void test_cli_numeric_tokens(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    const struct
+    {
+        const gchar *command;
+        const gchar *message;
+    } cases[] = {
+        {"add 5x title", "usage: add <priority> <title> [#tag ...]"},
+        {"add 999999999999999999999 title", "usage: add <priority> <title> [#tag ...]"},
+        {"del 1x", "invalid id 1x"},
+        {"del 999999999999999999999", "invalid id 999999999999999999999"},
+        {"top 1x", "expected an unsigned int <n>"},
+        {"top 999999999999999999999", "expected an unsigned int <n>"},
+    };
+    for (guint i = 0; i < G_N_ELEMENTS(cases); ++i) {
+        g_autoptr(GError) error = NULL;
+        g_test_message("%s", cases[i].command);
+        g_assert_cmpint(cli_execute_line(manager, cases[i].command, output, &error), ==, CLI_CONTINUE);
+        g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
+        g_assert_cmpstr(error->message, ==, cases[i].message);
+        g_assert_cmpstr(output->str, ==, "");
+        g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 0);
+    }
+}
+
+static void test_cli_tag_lifecycle(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    const struct
+    {
+        const gchar *command;
+        const gchar *expected;
+    } cases[] = {
+        {"add 5 buy milk #home", "added task 1\n"},
+        {"find #home", "id: 1, priority: 5, title: buy milk\n"},
+        {"untag 1 #home", "untagged task 1 from home\n"},
+        {"find #home", ""},
+        {"del 1", "deleted task 1\n"},
+        {"history", "add 5 buy milk #home\nfind #home\nuntag 1 #home\nfind #home\ndel 1\n"},
+    };
+    for (guint i = 0; i < G_N_ELEMENTS(cases); ++i) {
+        g_autoptr(GError) error = NULL;
+        g_string_truncate(output, 0);
+        g_assert_cmpint(cli_execute_line(manager, cases[i].command, output, &error), ==, CLI_CONTINUE);
+        g_assert_no_error(error);
+        g_assert_cmpstr(output->str, ==, cases[i].expected);
+    }
+    const TaskManagerStats stats = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats.tasks, ==, 0);
+    g_assert_cmpuint(stats.unique_tags, ==, 0);
+}
+
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
     g_test_add_func("/cli/basic", test_cli_base);
+    g_test_add_func("/cli/numeric-tokens", test_cli_numeric_tokens);
+    g_test_add_func("/cli/tag-lifecycle", test_cli_tag_lifecycle);
 
     g_test_add_func("/cli/add", test_cli_add);
     g_test_add_func("/cli/add/syntax-errors", test_cli_add_syntax_errors);

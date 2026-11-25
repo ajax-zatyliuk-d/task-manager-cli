@@ -25,7 +25,7 @@ static void test_task_new(void)
     task_free(task);
 }
 
-static void test_task_validation(void)
+static void test_task_priority(void)
 {
     g_autoptr(GError) error = NULL;
     g_assert_null(task_new(1, "invalid", 0, &error));
@@ -45,7 +45,13 @@ static void test_task_validation(void)
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
     g_assert_cmpint(task_get_priority(task), ==, 10);
+}
 
+static void test_task_invalid_tags(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_assert_no_error(error);
     const gchar *invalid[] = {NULL, "", "Bad", "a-b"};
     for (guint i = 0; i < G_N_ELEMENTS(invalid); ++i) {
         g_assert_false(task_add_tag(task, invalid[i], &error));
@@ -53,12 +59,28 @@ static void test_task_validation(void)
         g_clear_error(&error);
         g_assert_cmpuint(task_get_tag_count(task), ==, 0);
     }
+}
+
+static void test_task_duplicate_tag(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_assert_no_error(error);
     g_assert_true(task_add_tag(task, "work_1", &error));
     g_assert_no_error(error);
     g_assert_false(task_add_tag(task, "work_1", &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
     g_clear_error(&error);
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
+}
+
+static void test_task_remove_tag(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_assert_no_error(error);
+    g_assert_true(task_add_tag(task, "work_1", &error));
+    g_assert_no_error(error);
     gboolean removed = FALSE;
     g_assert_false(task_remove_tag(task, "Bad", &removed, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
@@ -126,6 +148,9 @@ int main(int argc, char **argv)
     g_test_add_func("/task/new", test_task_new);
     g_test_add_func("/task/new-with-tags", test_task_new_with_tags);
     g_test_add_func("/task/new-with-tags/errors", test_task_new_with_tags_errors);
-    g_test_add_func("/task/validation", test_task_validation);
+    g_test_add_func("/task/priority", test_task_priority);
+    g_test_add_func("/task/tags/invalid", test_task_invalid_tags);
+    g_test_add_func("/task/tags/duplicate", test_task_duplicate_tag);
+    g_test_add_func("/task/tags/remove", test_task_remove_tag);
     return g_test_run();
 }
