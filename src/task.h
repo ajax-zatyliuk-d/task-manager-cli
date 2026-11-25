@@ -68,13 +68,13 @@ const gchar *task_get_tag(const Task *task, guint index);
 guint task_get_tag_count(const Task *task);
 
 /**
- * task_is_tag_existed:
+ * task_has_tag:
  * @task: a task
  * @tag: a non-NULL, NUL-terminated tag
  *
  * Returns: %TRUE if the task contains @tag, otherwise %FALSE
  */
-gboolean task_is_tag_existed(const Task *task, const gchar *tag);
+gboolean task_has_tag(const Task *task, const gchar *tag);
 
 /**
  * task_compare:

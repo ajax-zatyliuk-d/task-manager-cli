@@ -607,17 +607,17 @@ static void test_top(void)
     const gchar *title3 = "cmd3";
     const gchar *title4 = "cmd4";
 
-    gint priority7 = 7;
-    gint priority5 = 5;
-    gint priority2 = 2;
+    gint high_priority = 7;
+    gint medium_priority = 5;
+    gint low_priority = 2;
 
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
-    guint task1_id = task_manager_add_task(manager, title1, priority5, &error);
-    guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
-    guint task3_id = task_manager_add_task(manager, title3, priority2, &error);
-    guint task4_id = task_manager_add_task(manager, title4, priority7, &error);
+    guint task1_id = task_manager_add_task(manager, title1, medium_priority, &error);
+    guint task2_id = task_manager_add_task(manager, title2, low_priority, &error);
+    guint task3_id = task_manager_add_task(manager, title3, low_priority, &error);
+    guint task4_id = task_manager_add_task(manager, title4, high_priority, &error);
     g_assert_no_error(error);
 
     GPtrArray *all_tasks = task_manager_top_tasks(manager, 4);
@@ -693,10 +693,10 @@ static void test_run(void)
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task1_id);
 
-    const Task *not_founded_task1 = task_manager_find_task_by_id(manager, task1_id, &error);
+    const Task *missing_task1 = task_manager_find_task_by_id(manager, task1_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
-    g_assert_null(not_founded_task1);
+    g_assert_null(missing_task1);
 
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);
@@ -712,10 +712,10 @@ static void test_run(void)
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
 
-    const Task *not_founded_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
+    const Task *missing_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
-    g_assert_null(not_founded_task2);
+    g_assert_null(missing_task2);
 
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);
@@ -730,10 +730,10 @@ static void test_run(void)
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task3_id);
 
-    const Task *not_founded_task3 = task_manager_find_task_by_id(manager, task3_id, &error);
+    const Task *missing_task3 = task_manager_find_task_by_id(manager, task3_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
-    g_assert_null(not_founded_task3);
+    g_assert_null(missing_task3);
 
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);
@@ -783,10 +783,10 @@ static void test_run_duplicated(void)
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task1_id);
 
-    const Task *not_founded_task1 = task_manager_find_task_by_id(manager, task1_id, &error);
+    const Task *missing_task1 = task_manager_find_task_by_id(manager, task1_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
-    g_assert_null(not_founded_task1);
+    g_assert_null(missing_task1);
 
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);
@@ -801,10 +801,10 @@ static void test_run_duplicated(void)
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
 
-    const Task *not_founded_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
+    const Task *missing_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
-    g_assert_null(not_founded_task2);
+    g_assert_null(missing_task2);
 
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);
@@ -818,10 +818,10 @@ static void test_run_duplicated(void)
     g_assert_no_error(error);
     g_assert_null(next_task);
 
-    const Task *not_founded_task1_again = task_manager_find_task_by_id(manager, task1_id, &error);
+    const Task *missing_task1_again = task_manager_find_task_by_id(manager, task1_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
-    g_assert_null(not_founded_task1_again);
+    g_assert_null(missing_task1_again);
 
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);
@@ -873,10 +873,10 @@ static void test_run_with_delete(void)
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
 
-    const Task *not_founded_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
+    const Task *missing_task2 = task_manager_find_task_by_id(manager, task2_id, &error);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
-    g_assert_null(not_founded_task2);
+    g_assert_null(missing_task2);
 
     top_tasks = task_manager_top_tasks(manager, 3);
     g_assert_nonnull(top_tasks);

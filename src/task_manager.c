@@ -22,7 +22,7 @@ static void task_destroy(gpointer task) { task_free(task); }
 
 static void tasks_array_destroy(gpointer ptr) { g_ptr_array_free(ptr, TRUE); }
 
-static Task *task_manager_task_lookup(GHashTable *tasks_by_id, guint id, GError **error)
+static Task *lookup_task_or_error(GHashTable *tasks_by_id, guint id, GError **error)
 {
     Task *task = g_hash_table_lookup(tasks_by_id, GUINT_TO_POINTER(id));
 
@@ -79,49 +79,48 @@ static gboolean validate_tags(const GPtrArray *tags, GError **error)
     return TRUE;
 }
 
-static void task_manager_add_tasks_by_tag(GHashTable *tasks_by_tag, Task *task, const gchar *tag)
+static void index_task_tag(TaskManager *manager, Task *task, const gchar *tag)
 {
-    GPtrArray *tasks = g_hash_table_lookup(tasks_by_tag, tag);
+    GPtrArray *tag_tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
 
-    if (tasks == NULL) {
-        tasks = g_ptr_array_new();
-        g_hash_table_insert(tasks_by_tag, g_strdup(tag), tasks);
+    if (tag_tasks == NULL) {
+        tag_tasks = g_ptr_array_new();
+        g_hash_table_insert(manager->tasks_by_tag, g_strdup(tag), tag_tasks);
     }
 
-    g_ptr_array_add(tasks, task);
-}
-
-static void task_manager_add_unique_tags(GHashTable *unique_tags, const gchar *tag)
-{
-    if (g_hash_table_contains(unique_tags, tag)) {
-        return;
+    g_ptr_array_add(tag_tasks, task);
+    if (!g_hash_table_contains(manager->unique_tags, tag)) {
+        g_hash_table_add(manager->unique_tags, g_strdup(tag));
     }
-
-    g_hash_table_add(unique_tags, g_strdup(tag));
 }
 
-static void attach_tag(TaskManager *manager, Task *task, const gchar *tag)
+static void unindex_task_tag(TaskManager *manager, const Task *task, const gchar *tag)
 {
-    task_add_tag(task, tag);
-    task_manager_add_tasks_by_tag(manager->tasks_by_tag, task, tag);
-    task_manager_add_unique_tags(manager->unique_tags, tag);
-}
-
-static void task_manager_remove_task_from_tag(TaskManager *manager, const Task *task, const gchar *tag)
-{
-    GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
-    g_assert_nonnull(tasks);
+    GPtrArray *tag_tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
+    g_assert_nonnull(tag_tasks);
 
     guint index = 0;
-    const gboolean found = g_ptr_array_find(tasks, task, &index);
+    const gboolean found = g_ptr_array_find(tag_tasks, task, &index);
     g_assert_true(found);
 
-    g_ptr_array_remove_index(tasks, index);
+    g_ptr_array_remove_index(tag_tasks, index);
 
-    if (tasks->len == 0) {
+    if (tag_tasks->len == 0) {
         g_hash_table_remove(manager->tasks_by_tag, tag);
         g_hash_table_remove(manager->unique_tags, tag);
     }
+}
+
+static void add_task_tag(TaskManager *manager, Task *task, const gchar *tag)
+{
+    task_add_tag(task, tag);
+    index_task_tag(manager, task, tag);
+}
+
+static void remove_task_tag(TaskManager *manager, Task *task, const gchar *tag)
+{
+    unindex_task_tag(manager, task, tag);
+    task_remove_tag(task, tag);
 }
 
 static gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
@@ -130,11 +129,21 @@ static gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
     return task_compare(a, b);
 }
 
+static void task_manager_index_task(TaskManager *manager, Task *task)
+{
+    g_sequence_insert_sorted(manager->tasks_sorted, task, compare_tasks, NULL);
+
+    for (guint i = 0; i < task_get_tag_count(task); ++i) {
+        const gchar *tag = task_get_tag(task, i);
+        index_task_tag(manager, task, tag);
+    }
+}
+
 static void task_manager_unindex_task(TaskManager *manager, Task *task)
 {
     const guint tag_count = task_get_tag_count(task);
     for (guint i = 0; i < tag_count; ++i) {
-        task_manager_remove_task_from_tag(manager, task, task_get_tag(task, i));
+        unindex_task_tag(manager, task, task_get_tag(task, i));
     }
 
     GSequenceIter *it = g_sequence_lookup(manager->tasks_sorted, task, compare_tasks, NULL);
@@ -176,19 +185,6 @@ void task_manager_free(TaskManager *manager)
     g_free(manager);
 }
 
-static void task_manager_register_task(TaskManager *manager, Task *task)
-{
-    const guint task_id = task_get_id(task);
-    g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(task_id), task);
-    g_sequence_insert_sorted(manager->tasks_sorted, task, compare_tasks, NULL);
-
-    for (guint i = 0; i < task_get_tag_count(task); ++i) {
-        const gchar *tag = task_get_tag(task, i);
-        task_manager_add_tasks_by_tag(manager->tasks_by_tag, task, tag);
-        task_manager_add_unique_tags(manager->unique_tags, tag);
-    }
-}
-
 guint task_manager_add_task(TaskManager *manager, const gchar *title, gint priority, GError **error)
 {
     return task_manager_add_task_with_tags(manager, title, priority, NULL, error);
@@ -219,7 +215,8 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
         }
     }
 
-    task_manager_register_task(manager, task);
+    g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(task_id), task);
+    task_manager_index_task(manager, task);
     manager->next_id++;
 
     return task_id;
@@ -227,7 +224,7 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
 
 gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error)
 {
-    Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
+    Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
     if (task == NULL) {
         return FALSE;
     }
@@ -246,17 +243,17 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
         return FALSE;
     }
 
-    Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
+    Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
     if (task == NULL) {
         return FALSE;
     }
 
-    if (task_is_tag_existed(task, tag)) {
+    if (task_has_tag(task, tag)) {
         g_set_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG, "task %u already has tag %s", id, tag);
         return FALSE;
     }
 
-    attach_tag(manager, task, tag);
+    add_task_tag(manager, task, tag);
 
     return TRUE;
 }
@@ -267,24 +264,23 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
         return FALSE;
     }
 
-    Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
+    Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
     if (task == NULL) {
         return FALSE;
     }
 
-    if (!task_is_tag_existed(task, tag)) {
+    if (!task_has_tag(task, tag)) {
         return TRUE;
     }
 
-    task_manager_remove_task_from_tag(manager, task, tag);
-    task_remove_tag(task, tag);
+    remove_task_tag(manager, task, tag);
 
     return TRUE;
 }
 
 const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error)
 {
-    return task_manager_task_lookup(manager->tasks_by_id, id, error);
+    return lookup_task_or_error(manager->tasks_by_id, id, error);
 }
 
 GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag, GError **error)
@@ -320,7 +316,7 @@ GPtrArray *task_manager_top_tasks(const TaskManager *manager, guint n)
 
 gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **error)
 {
-    Task *task = task_manager_task_lookup(manager->tasks_by_id, id, error);
+    Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
     if (task == NULL) {
         return FALSE;
     }
