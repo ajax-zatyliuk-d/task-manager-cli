@@ -231,7 +231,7 @@ gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error
 
     task_manager_unindex_task(manager, task);
 
-    // free task original memory
+    // Removing from the owning table frees the task after its references are removed.
     g_hash_table_remove(manager->tasks_by_id, GUINT_TO_POINTER(task_get_id(task)));
 
     return TRUE;
@@ -334,7 +334,7 @@ Task *task_manager_run_next(TaskManager *manager)
     Task *task = g_queue_pop_head(manager->run_queue);
     task_manager_unindex_task(manager, task);
 
-    // steal owning of *task
+    // Transfer ownership to the caller without freeing the task.
     g_hash_table_steal(manager->tasks_by_id, GUINT_TO_POINTER(task_get_id(task)));
 
     return task;
