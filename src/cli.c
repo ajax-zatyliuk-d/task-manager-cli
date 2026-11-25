@@ -103,7 +103,6 @@ static void cmd_add(TaskManager *manager, gchar *const *args, GString *output, G
     }
 
     g_string_append_printf(output, "added task %u\n", task_id);
-    return;
 }
 
 static void cmd_del(TaskManager *manager, gchar *const *args, GString *output, GError **error)
@@ -123,7 +122,6 @@ static void cmd_del(TaskManager *manager, gchar *const *args, GString *output, G
     }
 
     g_string_append_printf(output, "deleted task %u\n", id);
-    return;
 }
 
 static void cmd_tag(TaskManager *manager, gchar *const *args, GString *output, GError **error)
@@ -149,7 +147,6 @@ static void cmd_tag(TaskManager *manager, gchar *const *args, GString *output, G
     }
 
     g_string_append_printf(output, "tagged task %u with %s\n", id, tag);
-    return;
 }
 
 static void cmd_untag(TaskManager *manager, gchar *const *args, GString *output, GError **error)
@@ -175,7 +172,6 @@ static void cmd_untag(TaskManager *manager, gchar *const *args, GString *output,
     }
 
     g_string_append_printf(output, "untagged task %u from %s\n", id, tag);
-    return;
 }
 
 static void cmd_enqueue(TaskManager *manager, gchar *const *args, GString *output, GError **error)
@@ -195,7 +191,6 @@ static void cmd_enqueue(TaskManager *manager, gchar *const *args, GString *outpu
     }
 
     g_string_append_printf(output, "enqueued task %u\n", id);
-    return;
 }
 
 static void append_task_list(GString *output, const GPtrArray *tasks)
@@ -220,14 +215,12 @@ static void cmd_find(TaskManager *manager, gchar *const *args, GString *output, 
         return;
     }
 
-    GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, tag, error);
+    g_autoptr(GPtrArray) tasks = task_manager_find_tasks_by_tag(manager, tag, error);
     if (tasks == NULL) {
         return;
     }
 
     append_task_list(output, tasks);
-    g_ptr_array_unref(tasks);
-    return;
 }
 
 static void cmd_top(TaskManager *manager, gchar *const *args, GString *output, GError **error)
@@ -243,10 +236,8 @@ static void cmd_top(TaskManager *manager, gchar *const *args, GString *output, G
         return;
     }
 
-    GPtrArray *tasks = task_manager_top_tasks(manager, (guint)n);
+    g_autoptr(GPtrArray) tasks = task_manager_top_tasks(manager, (guint)n);
     append_task_list(output, tasks);
-    g_ptr_array_unref(tasks);
-    return;
 }
 
 static void cmd_run(TaskManager *manager, gchar *const *args, GString *output, GError **error)
@@ -265,7 +256,6 @@ static void cmd_run(TaskManager *manager, gchar *const *args, GString *output, G
     g_string_append_printf(output, "running: %s (id %u, priority %d)\n", task_get_title(task), task_get_id(task), task_get_priority(task));
 
     task_free(task);
-    return;
 }
 
 static void cmd_history(TaskManager *manager, gchar *const *args, GString *output, GError **error)
@@ -275,14 +265,11 @@ static void cmd_history(TaskManager *manager, gchar *const *args, GString *outpu
         return;
     }
 
-    GPtrArray *history = task_manager_get_history(manager);
+    g_autoptr(GPtrArray) history = task_manager_get_history(manager);
     for (guint i = 0; i < history->len; ++i) {
         const gchar *command = g_ptr_array_index(history, i);
         g_string_append_printf(output, "%s\n", command);
     }
-
-    g_ptr_array_unref(history);
-    return;
 }
 
 static void cmd_stats(TaskManager *manager, gchar *const *args, GString *output, GError **error)
@@ -294,8 +281,6 @@ static void cmd_stats(TaskManager *manager, gchar *const *args, GString *output,
 
     const TaskManagerStats stats = task_manager_get_stats(manager);
     g_string_append_printf(output, "tasks: %u\ntags: %u\nqueue: %u\n", stats.tasks, stats.unique_tags, stats.queue_length);
-
-    return;
 }
 
 static const CliCommand commands[] = {
