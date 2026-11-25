@@ -160,7 +160,7 @@ gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error
 
     unindex_task(manager, task);
 
-    // Removing from the owning table frees the task after its references are removed.
+    // removing from the owning table frees the task after its references are removed.
     g_hash_table_remove(manager->tasks_by_id, GUINT_TO_POINTER(task_get_id(task)));
 
     return TRUE;
@@ -189,6 +189,7 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
         return FALSE;
     }
 
+    // tag may point to the task's own string, which task_remove_tag() frees.
     g_autofree gchar *tag_copy = g_strdup(tag);
     gboolean removed = FALSE;
     if (!task_remove_tag(task, tag_copy, &removed, error)) {
@@ -254,7 +255,7 @@ Task *task_manager_extract_next_task(TaskManager *manager)
     Task *task = g_queue_pop_head(manager->run_queue);
     unindex_task(manager, task);
 
-    // Transfer ownership to the caller without freeing the task.
+    // transfer ownership to the caller without freeing the task.
     g_hash_table_steal(manager->tasks_by_id, GUINT_TO_POINTER(task_get_id(task)));
 
     return task;
