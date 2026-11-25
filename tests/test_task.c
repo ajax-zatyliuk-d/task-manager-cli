@@ -48,6 +48,43 @@ static void test_task_set_priority(void)
     g_assert_cmpint(task_get_priority(task), ==, 10);
 }
 
+static void test_task_new_maximum_priority(void)
+{
+    g_autoptr(GError) error = NULL;
+
+    g_autoptr(Task) task = task_new(1, "maximum priority", 10, &error);
+
+    g_assert_no_error(error);
+    g_assert_nonnull(task);
+    g_assert_cmpint(task_get_priority(task), ==, 10);
+}
+
+static void test_task_set_minimum_priority(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(Task) task = task_new(1, "valid", 10, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(task);
+
+    g_assert_true(task_set_priority(task, 1, &error));
+
+    g_assert_no_error(error);
+    g_assert_cmpint(task_get_priority(task), ==, 1);
+}
+
+static void test_task_set_priority_below_minimum(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(task);
+
+    g_assert_false(task_set_priority(task, 0, &error));
+
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
+    g_assert_cmpint(task_get_priority(task), ==, 1);
+}
+
 static void test_task_set_invalid_priority(void)
 {
     g_autoptr(GError) error = NULL;
@@ -250,7 +287,10 @@ int main(int argc, char **argv)
     g_test_add_func("/task/new-with-tags/invalid-priority", test_task_new_with_tags_invalid_priority);
     g_test_add_func("/task/new-with-tags/first-error", test_task_new_with_tags_reports_first_error);
     g_test_add_func("/task/priority/new-invalid", test_task_new_invalid_priority);
+    g_test_add_func("/task/priority/new-maximum", test_task_new_maximum_priority);
     g_test_add_func("/task/priority/set", test_task_set_priority);
+    g_test_add_func("/task/priority/set-minimum", test_task_set_minimum_priority);
+    g_test_add_func("/task/priority/set-below-minimum", test_task_set_priority_below_minimum);
     g_test_add_func("/task/priority/set-invalid", test_task_set_invalid_priority);
     g_test_add_func("/task/tags/invalid", test_task_invalid_tags);
     g_test_add_func("/task/tags/duplicate", test_task_duplicate_tag);
