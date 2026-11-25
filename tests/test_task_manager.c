@@ -811,11 +811,18 @@ static void test_run_transfer(void)
     g_autoptr(Task) returned = task_manager_extract_next_task(manager);
     g_assert_nonnull(returned);
     g_assert_true(returned == original);
+    g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 0);
+
+    g_clear_pointer(&manager, task_manager_free);
+    g_assert_cmpuint(task_get_id(returned), ==, id);
+    g_assert_cmpstr(task_get_title(returned), ==, "first");
+    g_assert_cmpstr(task_get_tag_at(returned, 0), ==, "work");
     g_assert_true(task_add_tag(returned, "home", &error));
     g_assert_no_error(error);
     g_assert_true(task_set_priority(returned, 10, &error));
     g_assert_no_error(error);
-    g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 0);
+    g_assert_cmpstr(task_get_tag_at(returned, 1), ==, "home");
+    g_assert_cmpint(task_get_priority(returned), ==, 10);
 }
 
 static void test_run_removes_duplicate_queue_entries(void)
