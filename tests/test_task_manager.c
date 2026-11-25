@@ -698,9 +698,14 @@ static void test_top_order(void)
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GError) error = NULL;
     const guint medium = task_manager_add_task(manager, "medium", 5, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(medium, !=, 0);
     const guint low = task_manager_add_task(manager, "low", 2, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(low, !=, 0);
     const guint high = task_manager_add_task(manager, "high", 7, &error);
     g_assert_no_error(error);
+    g_assert_cmpuint(high, !=, 0);
     g_autoptr(GPtrArray) tasks = task_manager_top_tasks(manager, 3);
     g_assert_cmpuint(tasks->len, ==, 3);
     g_assert_cmpuint(task_get_id(g_ptr_array_index(tasks, 0)), ==, high);
@@ -713,8 +718,11 @@ static void test_top_equal_priority(void)
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GError) error = NULL;
     const guint first = task_manager_add_task(manager, "first", 5, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(first, !=, 0);
     const guint second = task_manager_add_task(manager, "second", 5, &error);
     g_assert_no_error(error);
+    g_assert_cmpuint(second, !=, 0);
     g_autoptr(GPtrArray) tasks = task_manager_top_tasks(manager, 2);
     g_assert_cmpuint(tasks->len, ==, 2);
     g_assert_cmpuint(task_get_id(g_ptr_array_index(tasks, 0)), ==, first);
