@@ -51,6 +51,7 @@ typedef struct
     const gchar *title;
     const gchar *first_tag;
     const gchar *second_tag;
+    guint expected_tag_count;
 } AddCase;
 
 static void test_cli_add(gconstpointer data)
@@ -69,7 +70,7 @@ static void test_cli_add(gconstpointer data)
     g_assert_nonnull(task);
     g_assert_cmpstr(task_get_title(task), ==, test_case->title);
     g_assert_cmpint(task_get_priority(task), ==, 5);
-    g_assert_cmpuint(task_get_tag_count(task), ==, (test_case->first_tag != NULL) + (test_case->second_tag != NULL));
+    g_assert_cmpuint(task_get_tag_count(task), ==, test_case->expected_tag_count);
     if (test_case->first_tag != NULL) {
         g_assert_cmpstr(task_get_tag(task, 0), ==, test_case->first_tag);
     }
@@ -79,9 +80,9 @@ static void test_cli_add(gconstpointer data)
 }
 
 static const AddCase add_cases[] = {
-    {"add 5 buy milk", "buy milk", NULL, NULL},
-    {"add 5 title #home #shop", "title", "home", "shop"},
-    {"add  5   buy   milk  #a", "buy milk", "a", NULL},
+    {"add 5 buy milk", "buy milk", NULL, NULL, 0},
+    {"add 5 title #home #shop", "title", "home", "shop", 2},
+    {"add  5   buy   milk  #a", "buy milk", "a", NULL, 1},
 };
 
 static void test_cli_add_syntax_errors(void)
@@ -568,6 +569,7 @@ static void test_cli_find_one_match(void)
     g_autoptr(GError) error = NULL;
     const guint id = task_manager_add_task(manager, "first", 5, &error);
     g_assert_no_error(error);
+    g_assert_cmpuint(id, ==, 1);
     g_assert_true(task_manager_tag_task(manager, id, "work", &error));
     g_assert_no_error(error);
 
@@ -583,8 +585,10 @@ static void test_cli_find_multiple_matches(void)
     g_autoptr(GError) error = NULL;
     const guint first = task_manager_add_task(manager, "first", 5, &error);
     g_assert_no_error(error);
+    g_assert_cmpuint(first, ==, 1);
     const guint second = task_manager_add_task(manager, "second", 7, &error);
     g_assert_no_error(error);
+    g_assert_cmpuint(second, ==, 2);
     g_assert_true(task_manager_tag_task(manager, first, "work", &error));
     g_assert_no_error(error);
     g_assert_true(task_manager_tag_task(manager, second, "work", &error));
@@ -592,6 +596,7 @@ static void test_cli_find_multiple_matches(void)
 
     g_assert_cmpint(cli_execute_line(manager, "find #work", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
+    // The search does not guarantee an order for matching tasks.
     g_assert_true(g_str_equal(output->str, "id: 1, priority: 5, title: first\nid: 2, priority: 7, title: second\n") ||
                   g_str_equal(output->str, "id: 2, priority: 7, title: second\nid: 1, priority: 5, title: first\n"));
 }
