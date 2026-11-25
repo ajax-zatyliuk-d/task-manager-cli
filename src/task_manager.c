@@ -16,9 +16,9 @@ struct _TaskManager
     guint next_id;
 };
 
-static void task_destroy(gpointer task) { task_free(task); }
+static void destroy_task(gpointer task) { task_free(task); }
 
-static void tasks_array_destroy(gpointer ptr) { g_ptr_array_free(ptr, TRUE); }
+static void destroy_tasks_array(gpointer ptr) { g_ptr_array_free(ptr, TRUE); }
 
 static Task *lookup_task_or_error(GHashTable *tasks_by_id, guint id, GError **error)
 {
@@ -69,7 +69,7 @@ static gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
     return task_compare(a, b);
 }
 
-static void task_manager_index_task(TaskManager *manager, Task *task)
+static void index_task(TaskManager *manager, Task *task)
 {
     g_sequence_insert_sorted(manager->tasks_sorted, task, compare_tasks, NULL);
 
@@ -79,7 +79,7 @@ static void task_manager_index_task(TaskManager *manager, Task *task)
     }
 }
 
-static void task_manager_unindex_task(TaskManager *manager, Task *task)
+static void unindex_task(TaskManager *manager, Task *task)
 {
     const guint tag_count = task_get_tag_count(task);
     for (guint i = 0; i < tag_count; ++i) {
@@ -98,8 +98,8 @@ GQuark task_manager_error_quark(void) { return g_quark_from_static_string("task-
 TaskManager *task_manager_new(void)
 {
     TaskManager *manager = g_new(TaskManager, 1);
-    manager->tasks_by_id = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, task_destroy);
-    manager->tasks_by_tag = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, tasks_array_destroy);
+    manager->tasks_by_id = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, destroy_task);
+    manager->tasks_by_tag = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, destroy_tasks_array);
     manager->unique_tags = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
     manager->tasks_sorted = g_sequence_new(NULL);
     manager->run_queue = g_queue_new();
@@ -143,7 +143,7 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
         return 0;
     }
     g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(id), task);
-    task_manager_index_task(manager, task);
+    index_task(manager, task);
 
     manager->next_id = id + 1;
     return id;
@@ -156,7 +156,7 @@ gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error
         return FALSE;
     }
 
-    task_manager_unindex_task(manager, task);
+    unindex_task(manager, task);
 
     // Removing from the owning table frees the task after its references are removed.
     g_hash_table_remove(manager->tasks_by_id, GUINT_TO_POINTER(task_get_id(task)));
@@ -250,7 +250,7 @@ Task *task_manager_run_next(TaskManager *manager)
     }
 
     Task *task = g_queue_pop_head(manager->run_queue);
-    task_manager_unindex_task(manager, task);
+    unindex_task(manager, task);
 
     // Transfer ownership to the caller without freeing the task.
     g_hash_table_steal(manager->tasks_by_id, GUINT_TO_POINTER(task_get_id(task)));

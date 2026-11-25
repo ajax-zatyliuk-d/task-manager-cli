@@ -132,7 +132,7 @@ static void test_add_find(void)
     task_manager_free(manager);
 }
 
-static void test_add_invalid(void)
+static void test_add_id_exhausted(void)
 {
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
@@ -1122,7 +1122,7 @@ int main(int argc, char **argv)
     g_test_add_data_func("/task-manager/add-with-tags/invalid-atomic", GINT_TO_POINTER(FALSE), test_add_with_tags_atomic);
     g_test_add_data_func("/task-manager/add-with-tags/duplicate-atomic", GINT_TO_POINTER(TRUE), test_add_with_tags_atomic);
     g_test_add_func("/task-manager/add-with-tags/success", test_add_with_tags_success);
-    g_test_add_func("/task-manager/add-invalid", test_add_invalid);
+    g_test_add_func("/task-manager/add-invalid", test_add_id_exhausted);
     g_test_add_func("/task-manager/add/exhausted-before-validation", test_add_exhausted_before_validation);
     g_test_add_func("/task-manager/invalid-priority", test_invalid_priority);
     g_test_add_func("/task-manager/not-found", test_not_found);

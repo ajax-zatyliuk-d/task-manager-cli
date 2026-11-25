@@ -27,7 +27,7 @@ static void setup_terminal(void)
     }
 }
 
-static CliStatus execute_line(TaskManager *manager, const gchar *line, GString *output)
+static CliStatus execute_and_print_line(TaskManager *manager, const gchar *line, GString *output)
 {
     g_autoptr(GError) error = NULL;
     g_string_truncate(output, 0);
@@ -56,7 +56,7 @@ int main(void)
 
         switch (read_status) {
             case G_IO_STATUS_NORMAL:
-                if (execute_line(manager, line, output) == CLI_QUIT) {
+                if (execute_and_print_line(manager, line, output) == CLI_QUIT) {
                     return 0;
                 }
 
