@@ -12,6 +12,25 @@ struct _CliCommand
     CliHandler handler;
 };
 
+static void append_title_words(GString *title, gchar *const *first_word, gchar *const *end)
+{
+    for (gchar *const *word = first_word; word != end; ++word) {
+        if (word != first_word) {
+            g_string_append_c(title, ' ');
+        }
+        g_string_append(title, *word);
+    }
+}
+
+static void append_task_list(GString *output, const GPtrArray *tasks)
+{
+    for (guint i = 0; i < tasks->len; ++i) {
+        const Task *task = g_ptr_array_index(tasks, i);
+        g_string_append_printf(
+            output, "id: %u, priority: %d, title: %s\n", task_get_id(task), task_get_priority(task), task_get_title(task));
+    }
+}
+
 static gboolean parse_id(const gchar *word, guint *id, GError **error)
 {
     guint64 value;
@@ -49,16 +68,6 @@ static gboolean parse_add_tags(gchar *const *first_tag, GPtrArray *tags, GError 
     }
 
     return TRUE;
-}
-
-static void append_title_words(GString *title, gchar *const *first_word, gchar *const *end)
-{
-    for (gchar *const *word = first_word; word != end; ++word) {
-        if (word != first_word) {
-            g_string_append_c(title, ' ');
-        }
-        g_string_append(title, *word);
-    }
 }
 
 static gboolean parse_add_args(gchar *const *args, gint *priority, GString *title, GPtrArray *tags, GError **error)
@@ -214,15 +223,6 @@ static void cmd_run(TaskManager *manager, gchar *const *args, GString *output, G
     g_string_append_printf(output, "running: %s (id %u, priority %d)\n", task_get_title(task), task_get_id(task), task_get_priority(task));
 
     task_free(task);
-}
-
-static void append_task_list(GString *output, const GPtrArray *tasks)
-{
-    for (guint i = 0; i < tasks->len; ++i) {
-        const Task *task = g_ptr_array_index(tasks, i);
-        g_string_append_printf(
-            output, "id: %u, priority: %d, title: %s\n", task_get_id(task), task_get_priority(task), task_get_title(task));
-    }
 }
 
 static void cmd_find(TaskManager *manager, gchar *const *args, GString *output, GError **error)

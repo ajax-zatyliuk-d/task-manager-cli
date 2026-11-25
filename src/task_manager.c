@@ -41,9 +41,12 @@ static void index_task_tag(TaskManager *manager, Task *task, const gchar *tag)
     }
 
     g_ptr_array_add(tag_tasks, task);
-    if (!g_hash_table_contains(manager->unique_tags, tag)) {
-        g_hash_table_add(manager->unique_tags, g_strdup(tag));
+
+    if (g_hash_table_contains(manager->unique_tags, tag)) {
+        return;
     }
+
+    g_hash_table_add(manager->unique_tags, g_strdup(tag));
 }
 
 static void unindex_task_tag(TaskManager *manager, const Task *task, const gchar *tag)
@@ -57,10 +60,12 @@ static void unindex_task_tag(TaskManager *manager, const Task *task, const gchar
 
     g_ptr_array_remove_index(tag_tasks, index);
 
-    if (tag_tasks->len == 0) {
-        g_hash_table_remove(manager->tasks_by_tag, tag);
-        g_hash_table_remove(manager->unique_tags, tag);
+    if (tag_tasks->len != 0) {
+        return;
     }
+
+    g_hash_table_remove(manager->tasks_by_tag, tag);
+    g_hash_table_remove(manager->unique_tags, tag);
 }
 
 static gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
@@ -142,10 +147,12 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
     if (task == NULL) {
         return 0;
     }
+
     g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(id), task);
     index_task(manager, task);
 
     manager->next_id = id + 1;
+
     return id;
 }
 
@@ -170,9 +177,11 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
     if (task == NULL) {
         return FALSE;
     }
+
     if (!task_add_tag(task, tag, error)) {
         return FALSE;
     }
+
     index_task_tag(manager, task, tag);
 
     return TRUE;
@@ -184,6 +193,7 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
     if (task == NULL) {
         return FALSE;
     }
+
     g_autofree gchar *tag_copy = g_strdup(tag);
     gboolean removed = FALSE;
     if (!task_remove_tag(task, tag_copy, &removed, error)) {
@@ -240,6 +250,7 @@ gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **erro
     }
 
     g_queue_push_tail(manager->run_queue, task);
+
     return TRUE;
 }
 

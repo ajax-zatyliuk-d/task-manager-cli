@@ -17,6 +17,7 @@ static gboolean validate_priority(gint priority, GError **error)
         g_set_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY, "priority must be between 1 and 10, got %d", priority);
         return FALSE;
     }
+
     return TRUE;
 }
 
@@ -122,6 +123,7 @@ gboolean task_validate_tag(const gchar *tag, GError **error)
         g_set_error_literal(error, TASK_ERROR, TASK_ERROR_INVALID_TAG, "tag must not be empty");
         return FALSE;
     }
+
     for (const gchar *p = tag; *p != '\0'; ++p) {
         if (!(g_ascii_isdigit(*p) || g_ascii_islower(*p) || *p == '_')) {
             g_set_error_literal(
@@ -129,6 +131,7 @@ gboolean task_validate_tag(const gchar *tag, GError **error)
             return FALSE;
         }
     }
+
     return TRUE;
 }
 
