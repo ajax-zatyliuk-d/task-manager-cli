@@ -3,18 +3,34 @@
 #include <glib.h>
 
 typedef struct _Task Task;
+typedef enum
+{
+    TASK_ERROR_INVALID_PRIORITY,
+    TASK_ERROR_INVALID_TAG,
+    TASK_ERROR_DUPLICATE_TAG
+} TaskError;
+
+#define TASK_ERROR (task_error_quark())
+/**
+ * task_error_quark:
+ *
+ * Returns: the error domain for task validation
+ */
+GQuark task_error_quark(void);
 
 /**
  * task_new:
  * @id: task identifier, stored without validation
  * @title: (nullable): title to copy
- * @priority: priority, stored without validation
+ * @priority: priority from 1 to 10
+ * @error: (nullable): return location for a #GError, or %NULL
  *
  * Creates an independent task with no tags. The caller owns the task.
  *
- * Returns: (transfer full): a new task; free it with task_free()
+ * Returns: (transfer full) (nullable): a new task, or %NULL with
+ *   %TASK_ERROR_INVALID_PRIORITY if @error is provided
  */
-Task *task_new(guint id, const gchar *title, gint priority);
+Task *task_new(guint id, const gchar *title, gint priority, GError **error);
 
 /**
  * task_free:
@@ -23,6 +39,8 @@ Task *task_new(guint id, const gchar *title, gint priority);
  * Frees the task and its owned title and tags.
  */
 void task_free(Task *task);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(Task, task_free);
 
 /**
  * task_get_id:
@@ -48,6 +66,27 @@ const gchar *task_get_title(const Task *task);
  * Returns: the task priority
  */
 gint task_get_priority(const Task *task);
+
+/**
+ * task_set_priority:
+ * @task: an independently owned task
+ * @priority: priority from 1 to 10
+ * @error: (nullable): return location for a #GError, or %NULL
+ *
+ * Returns: %TRUE on success; otherwise %FALSE, leaving the task unchanged and
+ *   setting %TASK_ERROR_INVALID_PRIORITY if @error is provided
+ */
+gboolean task_set_priority(Task *task, gint priority, GError **error);
+
+/**
+ * task_validate_tag:
+ * @tag: (nullable): tag to validate
+ * @error: (nullable): return location for a #GError, or %NULL
+ *
+ * Returns: %TRUE for a non-empty tag containing only [a-z0-9_]; otherwise
+ *   %FALSE, setting %TASK_ERROR_INVALID_TAG if @error is provided
+ */
+gboolean task_validate_tag(const gchar *tag, GError **error);
 
 /**
  * task_get_tag:
@@ -90,18 +129,27 @@ gint task_compare(const Task *first, const Task *second);
 
 /**
  * task_add_tag:
- * @task: a task
- * @tag: a non-NULL, NUL-terminated tag to copy
+ * @task: a task owned by the caller
+ * @tag: (nullable): tag to copy
+ * @error: (nullable): return location for a #GError, or %NULL
  *
- * Adds a copy without validating the tag or checking for duplicates.
+ * Adds a valid tag if absent. The task is unchanged on failure.
+ *
+ * Returns: %TRUE on success; %FALSE with %TASK_ERROR_INVALID_TAG or
+ *   %TASK_ERROR_DUPLICATE_TAG if @error is provided
  */
-void task_add_tag(Task *task, const gchar *tag);
+gboolean task_add_tag(Task *task, const gchar *tag, GError **error);
 
 /**
  * task_remove_tag:
- * @task: a task
- * @tag: a non-NULL, NUL-terminated tag
+ * @task: a task owned by the caller
+ * @tag: (nullable): tag to remove
+ * @removed: (out) (optional): whether the tag existed
+ * @error: (nullable): return location for a #GError, or %NULL
  *
- * Removes the first matching tag. Does nothing if the tag is absent.
+ * Removes a valid tag, if present; leaves the task unchanged on failure.
+ *
+ * Returns: %TRUE on success, or %FALSE with %TASK_ERROR_INVALID_TAG
+ *   if @error is provided
  */
-void task_remove_tag(Task *task, const gchar *tag);
+gboolean task_remove_tag(Task *task, const gchar *tag, gboolean *removed, GError **error);

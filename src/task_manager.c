@@ -4,8 +4,6 @@
 #include <stddef.h>
 
 #define CMD_HISTORY_LEN 10
-#define TASK_PRIORITY_MIN 1
-#define TASK_PRIORITY_MAX 10
 
 struct _TaskManager
 {
@@ -33,49 +31,33 @@ static Task *lookup_task_or_error(GHashTable *tasks_by_id, guint id, GError **er
     return task;
 }
 
-static gboolean validate_tag(const gchar *tag, GError **error)
+static void propagate_task_error(GError **error, GError *task_error)
 {
-    if (tag == NULL || *tag == '\0') {
-        g_set_error_literal(error, TM_ERROR, TM_ERROR_INVALID_TAG, "tag must not be empty");
-
-        return FALSE;
+    gint code;
+    switch (task_error->code) {
+        case TASK_ERROR_INVALID_PRIORITY:
+            code = TM_ERROR_INVALID_PRIORITY;
+            break;
+        case TASK_ERROR_INVALID_TAG:
+            code = TM_ERROR_INVALID_TAG;
+            break;
+        case TASK_ERROR_DUPLICATE_TAG:
+            code = TM_ERROR_DUPLICATE_TAG;
+            break;
+        default:
+            g_assert_not_reached();
     }
-
-    for (const gchar *p = tag; *p != '\0'; ++p) {
-        const gchar c = *p;
-
-        if (!(g_ascii_isdigit(c) || g_ascii_islower(c) || c == '_')) {
-            g_set_error_literal(
-                error, TM_ERROR, TM_ERROR_INVALID_TAG, "tag must contain only lowercase ASCII letters, digits, or underscores");
-
-            return FALSE;
-        }
-    }
-
-    return TRUE;
+    g_set_error_literal(error, TM_ERROR, code, task_error->message);
+    g_error_free(task_error);
 }
 
-static gboolean validate_tags(const GPtrArray *tags, GError **error)
+static gboolean validate_tag(const gchar *tag, GError **error)
 {
-    if (tags == NULL) {
-        return TRUE;
+    GError *task_error = NULL;
+    if (!task_validate_tag(tag, &task_error)) {
+        propagate_task_error(error, task_error);
+        return FALSE;
     }
-
-    g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
-    for (guint i = 0; i < tags->len; i++) {
-        gpointer item = g_ptr_array_index(tags, i);
-        const gchar *tag = item;
-
-        if (!validate_tag(tag, error)) {
-            return FALSE;
-        }
-
-        if (!g_hash_table_add(seen, item)) {
-            g_set_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
-            return FALSE;
-        }
-    }
-
     return TRUE;
 }
 
@@ -109,18 +91,6 @@ static void unindex_task_tag(TaskManager *manager, const Task *task, const gchar
         g_hash_table_remove(manager->tasks_by_tag, tag);
         g_hash_table_remove(manager->unique_tags, tag);
     }
-}
-
-static void add_task_tag(TaskManager *manager, Task *task, const gchar *tag)
-{
-    task_add_tag(task, tag);
-    index_task_tag(manager, task, tag);
-}
-
-static void remove_task_tag(TaskManager *manager, Task *task, const gchar *tag)
-{
-    unindex_task_tag(manager, task, tag);
-    task_remove_tag(task, tag);
 }
 
 static gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
@@ -190,36 +160,53 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
     return task_manager_add_task_with_tags(manager, title, priority, NULL, error);
 }
 
+gboolean task_manager_take_task(TaskManager *manager, Task *task, GError **error)
+{
+    const guint id = task_get_id(task);
+    if (id == 0 || id == G_MAXUINT) {
+        g_set_error(error, TM_ERROR, TM_ERROR_INVALID_ID, "invalid task ID %u", id);
+        return FALSE;
+    }
+    if (g_hash_table_contains(manager->tasks_by_id, GUINT_TO_POINTER(id))) {
+        g_set_error(error, TM_ERROR, TM_ERROR_DUPLICATE_ID, "task ID %u already exists", id);
+        return FALSE;
+    }
+    g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(id), task);
+    task_manager_index_task(manager, task);
+    return TRUE;
+}
+
 guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, gint priority, const GPtrArray *tags, GError **error)
 {
-    if (!validate_tags(tags, error)) {
+    GError *task_error = NULL;
+    guint id = manager->next_id;
+    while (id != 0 && id != G_MAXUINT && g_hash_table_contains(manager->tasks_by_id, GUINT_TO_POINTER(id))) {
+        ++id;
+    }
+    g_autoptr(Task) task = task_new(id, title, priority, &task_error);
+    if (task == NULL) {
+        propagate_task_error(error, task_error);
         return 0;
     }
-
-    if (priority < TASK_PRIORITY_MIN || priority > TASK_PRIORITY_MAX) {
-        g_set_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY, "priority must be between %d and %d, got %d", TASK_PRIORITY_MIN,
-            TASK_PRIORITY_MAX, priority);
-        return 0;
-    }
-
-    const guint task_id = manager->next_id;
-    if (task_id == 0 || task_id == G_MAXUINT) {
-        g_set_error_literal(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED, "no more task IDs available");
-        return 0;
-    }
-
-    Task *task = task_new(task_id, title, priority);
     if (tags != NULL) {
         for (guint i = 0; i < tags->len; ++i) {
-            task_add_tag(task, g_ptr_array_index(tags, i));
+            if (!task_add_tag(task, g_ptr_array_index(tags, i), &task_error)) {
+                propagate_task_error(error, task_error);
+                return 0;
+            }
         }
     }
 
-    g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(task_id), task);
-    task_manager_index_task(manager, task);
-    manager->next_id++;
-
-    return task_id;
+    if (id == 0 || id == G_MAXUINT) {
+        g_set_error_literal(error, TM_ERROR, TM_ERROR_ID_EXHAUSTED, "no more task IDs available");
+        return 0;
+    }
+    if (!task_manager_take_task(manager, task, error)) {
+        return 0;
+    }
+    g_steal_pointer(&task);
+    manager->next_id = id + 1;
+    return id;
 }
 
 gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error)
@@ -239,41 +226,36 @@ gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error
 
 gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag, GError **error)
 {
-    if (!validate_tag(tag, error)) {
-        return FALSE;
-    }
-
     Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
     if (task == NULL) {
         return FALSE;
     }
-
-    if (task_has_tag(task, tag)) {
-        g_set_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG, "task %u already has tag %s", id, tag);
+    GError *task_error = NULL;
+    if (!task_add_tag(task, tag, &task_error)) {
+        propagate_task_error(error, task_error);
         return FALSE;
     }
-
-    add_task_tag(manager, task, tag);
+    index_task_tag(manager, task, tag);
 
     return TRUE;
 }
 
 gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *tag, GError **error)
 {
-    if (!validate_tag(tag, error)) {
-        return FALSE;
-    }
-
     Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
     if (task == NULL) {
         return FALSE;
     }
-
-    if (!task_has_tag(task, tag)) {
-        return TRUE;
+    g_autofree gchar *tag_copy = g_strdup(tag);
+    gboolean removed = FALSE;
+    GError *task_error = NULL;
+    if (!task_remove_tag(task, tag_copy, &removed, &task_error)) {
+        propagate_task_error(error, task_error);
+        return FALSE;
     }
-
-    remove_task_tag(manager, task, tag);
+    if (removed) {
+        unindex_task_tag(manager, task, tag_copy);
+    }
 
     return TRUE;
 }

@@ -11,8 +11,22 @@ struct _Task
     gint64 created_at;
 };
 
-Task *task_new(guint id, const gchar *title, gint priority)
+GQuark task_error_quark(void) { return g_quark_from_static_string("task-error-quark"); }
+
+static gboolean validate_priority(gint priority, GError **error)
 {
+    if (priority < 1 || priority > 10) {
+        g_set_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY, "priority must be between 1 and 10, got %d", priority);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+Task *task_new(guint id, const gchar *title, gint priority, GError **error)
+{
+    if (!validate_priority(priority, error)) {
+        return NULL;
+    }
     Task *task = g_new(Task, 1);
 
     task->id = id;
@@ -36,6 +50,31 @@ guint task_get_id(const Task *task) { return task->id; }
 const gchar *task_get_title(const Task *task) { return task->title; }
 
 gint task_get_priority(const Task *task) { return task->priority; }
+
+gboolean task_set_priority(Task *task, gint priority, GError **error)
+{
+    if (!validate_priority(priority, error)) {
+        return FALSE;
+    }
+    task->priority = priority;
+    return TRUE;
+}
+
+gboolean task_validate_tag(const gchar *tag, GError **error)
+{
+    if (tag == NULL || *tag == '\0') {
+        g_set_error_literal(error, TASK_ERROR, TASK_ERROR_INVALID_TAG, "tag must not be empty");
+        return FALSE;
+    }
+    for (const gchar *p = tag; *p != '\0'; ++p) {
+        if (!(g_ascii_isdigit(*p) || g_ascii_islower(*p) || *p == '_')) {
+            g_set_error_literal(
+                error, TASK_ERROR, TASK_ERROR_INVALID_TAG, "tag must contain only lowercase ASCII letters, digits, or underscores");
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
 
 const gchar *task_get_tag(const Task *task, guint index)
 {
@@ -76,15 +115,31 @@ gint task_compare(const Task *first, const Task *second)
     return 0;
 }
 
-void task_add_tag(Task *task, const gchar *tag) { g_ptr_array_add(task->tags, g_strdup(tag)); }
-
-void task_remove_tag(Task *task, const gchar *tag)
+gboolean task_add_tag(Task *task, const gchar *tag, GError **error)
 {
-    guint index;
-
-    if (!g_ptr_array_find_with_equal_func(task->tags, tag, g_str_equal, &index)) {
-        return;
+    if (!task_validate_tag(tag, error)) {
+        return FALSE;
     }
+    if (task_has_tag(task, tag)) {
+        g_set_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
+        return FALSE;
+    }
+    g_ptr_array_add(task->tags, g_strdup(tag));
+    return TRUE;
+}
 
-    g_ptr_array_remove_index(task->tags, index);
+gboolean task_remove_tag(Task *task, const gchar *tag, gboolean *removed, GError **error)
+{
+    if (!task_validate_tag(tag, error)) {
+        return FALSE;
+    }
+    guint index;
+    const gboolean found = g_ptr_array_find_with_equal_func(task->tags, tag, g_str_equal, &index);
+    if (removed != NULL) {
+        *removed = found;
+    }
+    if (found) {
+        g_ptr_array_remove_index(task->tags, index);
+    }
+    return TRUE;
 }
