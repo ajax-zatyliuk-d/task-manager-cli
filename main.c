@@ -6,6 +6,7 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <errno.h>
 #include <locale.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -27,18 +28,24 @@ static void setup_terminal(void)
     }
 }
 
-static CliStatus execute_and_print_line(TaskManager *manager, const gchar *line, GString *output)
+static gboolean execute_and_print_line(TaskManager *manager, const gchar *line, GString *output, CliStatus *status)
 {
     g_autoptr(GError) error = NULL;
     g_string_truncate(output, 0);
-    const CliStatus status = cli_execute_line(manager, line, output, &error);
+    *status = cli_execute_line(manager, line, output, &error);
 
     g_print("%s", output->str);
+    // g_print() may already have flushed stdout, so check both the stream and flush errors.
+    if (ferror(stdout) || fflush(stdout) != 0) {
+        g_printerr("error: stdout: %s\n", g_strerror(errno));
+        return FALSE;
+    }
+
     if (error != NULL) {
         g_printerr("error: %s\n", error->message);
     }
 
-    return status;
+    return TRUE;
 }
 
 int main(void)
@@ -55,12 +62,17 @@ int main(void)
         const GIOStatus read_status = g_io_channel_read_line(channel, &line, NULL, NULL, &error);
 
         switch (read_status) {
-            case G_IO_STATUS_NORMAL:
-                if (execute_and_print_line(manager, line, output) == CLI_QUIT) {
+            case G_IO_STATUS_NORMAL: {
+                CliStatus status;
+                if (!execute_and_print_line(manager, line, output, &status)) {
+                    return 1;
+                }
+                if (status == CLI_QUIT) {
                     return 0;
                 }
 
                 break;
+            }
             case G_IO_STATUS_EOF:
                 return 0;
             case G_IO_STATUS_ERROR:
