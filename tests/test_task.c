@@ -181,7 +181,7 @@ static void test_task_set_priority_below_minimum(void)
     g_assert_cmpint(task_get_priority(task), ==, 1);
 }
 
-static void test_task_set_invalid_priority(void)
+static void test_task_set_priority_above_maximum(void)
 {
     g_autoptr(GError) error = NULL;
     g_autoptr(Task) task = task_new(1, "valid", 10, &error);
@@ -318,7 +318,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task/priority/set", test_task_set_priority);
     g_test_add_func("/task/priority/set-minimum", test_task_set_minimum_priority);
     g_test_add_func("/task/priority/set-below-minimum", test_task_set_priority_below_minimum);
-    g_test_add_func("/task/priority/set-invalid", test_task_set_invalid_priority);
+    g_test_add_func("/task/priority/set-above-maximum", test_task_set_priority_above_maximum);
 
     g_test_add_func("/task/tags/add-invalid", test_task_add_invalid_tags);
     g_test_add_func("/task/tags/add-duplicate", test_task_add_duplicate_tag);

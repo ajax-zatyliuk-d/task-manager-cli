@@ -105,7 +105,7 @@ static void test_add_exhausted_before_validation(void)
     g_assert_cmpstr(task_get_title(task), ==, "existing");
 }
 
-static void test_invalid_priority(void)
+static void test_add_rejects_invalid_priority_without_consuming_id(void)
 {
     GError *error = NULL;
 
@@ -557,7 +557,7 @@ static void test_find_by_tag_returns_independent_array(void)
     g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 1);
 }
 
-static void test_find_by_invalid_tag(void)
+static void test_find_by_tag_returns_empty_for_invalid_format(void)
 {
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GError) error = NULL;
@@ -1025,7 +1025,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/add/find", test_add_find);
     g_test_add_func("/task-manager/add/id-exhausted", test_add_id_exhausted);
     g_test_add_func("/task-manager/add/exhausted-before-validation", test_add_exhausted_before_validation);
-    g_test_add_func("/task-manager/add/invalid-priority", test_invalid_priority);
+    g_test_add_func("/task-manager/add/invalid-priority-id-not-consumed", test_add_rejects_invalid_priority_without_consuming_id);
 
     g_test_add_data_func("/task-manager/add-with-tags/invalid-atomic", GINT_TO_POINTER(FALSE), test_add_with_tags_atomic);
     g_test_add_data_func("/task-manager/add-with-tags/duplicate-atomic", GINT_TO_POINTER(TRUE), test_add_with_tags_atomic);
@@ -1048,7 +1048,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/tag/unknown-id", test_tag_unknown_id);
     g_test_add_func("/task-manager/tag/find-valid", test_find_by_tag);
     g_test_add_func("/task-manager/tag/find-independent-array", test_find_by_tag_returns_independent_array);
-    g_test_add_func("/task-manager/tag/find-invalid", test_find_by_invalid_tag);
+    g_test_add_func("/task-manager/tag/find-invalid-format-empty", test_find_by_tag_returns_empty_for_invalid_format);
 
     g_test_add_func("/task-manager/untag/shared", test_untag_shared_tag);
     g_test_add_func("/task-manager/untag/last", test_untag_last_occurrence);
