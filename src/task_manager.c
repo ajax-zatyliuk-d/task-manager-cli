@@ -38,15 +38,10 @@ static void index_task_tag(TaskManager *manager, Task *task, const gchar *tag)
     if (tag_tasks == NULL) {
         tag_tasks = g_ptr_array_new();
         g_hash_table_insert(manager->tasks_by_tag, g_strdup(tag), tag_tasks);
+        g_hash_table_add(manager->unique_tags, g_strdup(tag));
     }
 
     g_ptr_array_add(tag_tasks, task);
-
-    if (g_hash_table_contains(manager->unique_tags, tag)) {
-        return;
-    }
-
-    g_hash_table_add(manager->unique_tags, g_strdup(tag));
 }
 
 static void unindex_task_tag(TaskManager *manager, const Task *task, const gchar *tag)
