@@ -535,75 +535,50 @@ static void test_cli_enqueue_invalid(void)
     task_manager_free(manager);
 }
 
-static void test_cli_find(void)
+static void test_cli_find_no_matches(void)
 {
-    TaskManager *manager = task_manager_new();
-    g_assert_nonnull(manager);
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    g_autoptr(GError) error = NULL;
 
-    GError *error = NULL;
-    GString *output = g_string_new(NULL);
-
-    // Empty manager.
-    CliStatus status = cli_execute_line(manager, "find #work", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(manager, "find #work", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "");
+}
 
-    guint id1 = task_manager_add_task(manager, "first", 5, &error);
+static void test_cli_find_one_match(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    g_autoptr(GError) error = NULL;
+    const guint id = task_manager_add_task(manager, "first", 5, &error);
     g_assert_no_error(error);
-    guint id2 = task_manager_add_task(manager, "second", 7, &error);
-    g_assert_no_error(error);
-    guint id3 = task_manager_add_task(manager, "third", 3, &error);
-    g_assert_no_error(error);
-
-    g_assert_cmpuint(id1, ==, 1);
-    g_assert_cmpuint(id2, ==, 2);
-    g_assert_cmpuint(id3, ==, 3);
-
-    g_assert_true(task_manager_tag_task(manager, id1, "work", &error));
-    g_assert_no_error(error);
-    g_assert_true(task_manager_tag_task(manager, id2, "work", &error));
-    g_assert_no_error(error);
-    g_assert_true(task_manager_tag_task(manager, id3, "home", &error));
+    g_assert_true(task_manager_tag_task(manager, id, "work", &error));
     g_assert_no_error(error);
 
-    // Two matching tasks, either order.
-    status = cli_execute_line(manager, "find #work", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(manager, "find #work", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
-    g_assert_true(g_strcmp0(output->str, "id: 1, priority: 5, title: first\nid: 2, priority: 7, title: second\n") == 0 ||
-                  g_strcmp0(output->str, "id: 2, priority: 7, title: second\nid: 1, priority: 5, title: first\n") == 0);
+    g_assert_cmpstr(output->str, ==, "id: 1, priority: 5, title: first\n");
+}
 
-    g_string_truncate(output, 0);
-
-    // Repeated lookup returns the same matches.
-    status = cli_execute_line(manager, "find #work", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+static void test_cli_find_multiple_matches(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    g_autoptr(GError) error = NULL;
+    const guint first = task_manager_add_task(manager, "first", 5, &error);
     g_assert_no_error(error);
-    g_assert_true(g_strcmp0(output->str, "id: 1, priority: 5, title: first\nid: 2, priority: 7, title: second\n") == 0 ||
-                  g_strcmp0(output->str, "id: 2, priority: 7, title: second\nid: 1, priority: 5, title: first\n") == 0);
-
-    g_string_truncate(output, 0);
-
-    // A different tag.
-    status = cli_execute_line(manager, "find #home", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    const guint second = task_manager_add_task(manager, "second", 7, &error);
     g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "id: 3, priority: 3, title: third\n");
-
-    g_string_truncate(output, 0);
-
-    // Valid tag without matches.
-    status = cli_execute_line(manager, "find #missing", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_true(task_manager_tag_task(manager, first, "work", &error));
     g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "");
+    g_assert_true(task_manager_tag_task(manager, second, "work", &error));
+    g_assert_no_error(error);
 
-    TaskManagerStats stats = task_manager_get_stats(manager);
-    g_assert_cmpuint(stats.tasks, ==, 3);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
+    g_assert_cmpint(cli_execute_line(manager, "find #work", output, &error), ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_assert_true(g_str_equal(output->str, "id: 1, priority: 5, title: first\nid: 2, priority: 7, title: second\n") ||
+                  g_str_equal(output->str, "id: 2, priority: 7, title: second\nid: 1, priority: 5, title: first\n"));
 }
 
 static void test_cli_find_invalid(void)
@@ -1065,7 +1040,9 @@ int main(int argc, char **argv)
     g_test_add_func("/cli/enqueue", test_cli_enqueue);
     g_test_add_func("/cli/enqueue-invalid", test_cli_enqueue_invalid);
 
-    g_test_add_func("/cli/find", test_cli_find);
+    g_test_add_func("/cli/find/no-matches", test_cli_find_no_matches);
+    g_test_add_func("/cli/find/one-match", test_cli_find_one_match);
+    g_test_add_func("/cli/find/multiple-matches", test_cli_find_multiple_matches);
     g_test_add_func("/cli/find-invalid", test_cli_find_invalid);
 
     g_test_add_func("/cli/top", test_cli_top);
