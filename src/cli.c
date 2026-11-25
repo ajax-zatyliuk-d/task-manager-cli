@@ -198,6 +198,24 @@ static void cmd_enqueue(TaskManager *manager, gchar *const *args, GString *outpu
     g_string_append_printf(output, "enqueued task %u\n", id);
 }
 
+static void cmd_run(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+{
+    if (args[0] != NULL) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: run");
+        return;
+    }
+
+    Task *task = task_manager_run_next(manager);
+    if (task == NULL) {
+        g_string_append_printf(output, "queue is empty\n");
+        return;
+    }
+
+    g_string_append_printf(output, "running: %s (id %u, priority %d)\n", task_get_title(task), task_get_id(task), task_get_priority(task));
+
+    task_free(task);
+}
+
 static void append_task_list(GString *output, const GPtrArray *tasks)
 {
     for (guint i = 0; i < tasks->len; ++i) {
@@ -245,24 +263,6 @@ static void cmd_top(TaskManager *manager, gchar *const *args, GString *output, G
     append_task_list(output, tasks);
 }
 
-static void cmd_run(TaskManager *manager, gchar *const *args, GString *output, GError **error)
-{
-    if (args[0] != NULL) {
-        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: run");
-        return;
-    }
-
-    Task *task = task_manager_run_next(manager);
-    if (task == NULL) {
-        g_string_append_printf(output, "queue is empty\n");
-        return;
-    }
-
-    g_string_append_printf(output, "running: %s (id %u, priority %d)\n", task_get_title(task), task_get_id(task), task_get_priority(task));
-
-    task_free(task);
-}
-
 static void cmd_history(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] != NULL) {
@@ -294,9 +294,9 @@ static const CliCommand commands[] = {
     {"tag", cmd_tag},
     {"untag", cmd_untag},
     {"enqueue", cmd_enqueue},
+    {"run", cmd_run},
     {"find", cmd_find},
     {"top", cmd_top},
-    {"run", cmd_run},
     {"history", cmd_history},
     {"stats", cmd_stats},
 };
