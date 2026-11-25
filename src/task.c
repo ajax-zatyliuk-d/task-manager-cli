@@ -22,7 +22,22 @@ static gboolean validate_priority(gint priority, GError **error)
     return TRUE;
 }
 
-Task *task_new(guint id, const gchar *title, gint priority, GError **error)
+static gboolean task_add_initial_tags(Task *task, const GPtrArray *tags, GError **error)
+{
+    if (tags == NULL) {
+        return TRUE;
+    }
+    for (guint i = 0; i < tags->len; ++i) {
+        if (!task_add_tag(task, g_ptr_array_index(tags, i), error)) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+Task *task_new(guint id, const gchar *title, gint priority, GError **error) { return task_new_with_tags(id, title, priority, NULL, error); }
+
+Task *task_new_with_tags(guint id, const gchar *title, gint priority, const GPtrArray *tags, GError **error)
 {
     if (!validate_priority(priority, error)) {
         return NULL;
@@ -34,6 +49,11 @@ Task *task_new(guint id, const gchar *title, gint priority, GError **error)
     task->priority = priority;
     task->tags = g_ptr_array_new_with_free_func(g_free);
     task->created_at = g_get_monotonic_time();
+
+    if (!task_add_initial_tags(task, tags, error)) {
+        task_free(task);
+        return NULL;
+    }
 
     return task;
 }

@@ -33,6 +33,26 @@ GQuark task_error_quark(void);
 Task *task_new(guint id, const gchar *title, gint priority, GError **error);
 
 /**
+ * task_new_with_tags:
+ * @id: task identifier, stored without validation
+ * @title: (nullable): title to copy
+ * @priority: priority from 1 to 10
+ * @tags: (nullable) (element-type utf8) (transfer none): borrowed tags without
+ *   '#', or %NULL; the array and its strings remain owned by the caller
+ * @error: (nullable): return location for a #GError, or %NULL; if provided,
+ *   must point to %NULL
+ *
+ * Creates an independent task with copies of its initial tags. An empty array
+ * adds no tags. Tags must be non-empty, contain only [a-z0-9_], and be unique.
+ * On failure, the partially created task and its copies are freed.
+ *
+ * Returns: (transfer full) (nullable): a task owned by the caller, or %NULL
+ *   with %TASK_ERROR_INVALID_PRIORITY, %TASK_ERROR_INVALID_TAG, or
+ *   %TASK_ERROR_DUPLICATE_TAG if @error is provided
+ */
+Task *task_new_with_tags(guint id, const gchar *title, gint priority, const GPtrArray *tags, GError **error);
+
+/**
  * task_free:
  * @task: (transfer full): a non-NULL task
  *
