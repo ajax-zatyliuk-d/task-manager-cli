@@ -40,17 +40,15 @@ static gboolean validate_tag(const gchar *tag, GError **error)
     return TRUE;
 }
 
-static gboolean validate_tag_for_addition(const gchar *tag, const GPtrArray *tags, GError **error)
+static gboolean validate_tag_for_addition(const gchar *tag, GPtrArray *tags, GError **error)
 {
     if (!validate_tag(tag, error)) {
         return FALSE;
     }
 
-    for (guint i = 0; i < tags->len; ++i) {
-        if (g_str_equal(tag, g_ptr_array_index(tags, i))) {
-            g_set_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
-            return FALSE;
-        }
+    if (g_ptr_array_find_with_equal_func(tags, tag, g_str_equal, NULL)) {
+        g_set_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
+        return FALSE;
     }
 
     return TRUE;
