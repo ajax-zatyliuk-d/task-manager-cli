@@ -35,7 +35,7 @@ static gchar *strip_tag_prefix(gchar *word) { return word != NULL && word[0] == 
 
 static gchar *const *find_first_tag_token(gchar *const *words)
 {
-    while (*words != NULL && strip_tag_prefix(*words) == NULL) {
+    while (*words != NULL && (*words)[0] != '#') {
         ++words;
     }
 
