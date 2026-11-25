@@ -54,28 +54,53 @@ typedef struct
     guint expected_tag_count;
 } AddCase;
 
+typedef struct
+{
+    const gchar *command;
+    const gchar *message;
+} NumericCase;
+
+typedef struct
+{
+    const gchar *command;
+    GQuark (*domain)(void);
+    gint code;
+} InvalidCase;
+
+typedef struct
+{
+    const gchar *command;
+} TopInvalidCase;
+
+enum
+{
+    PARSE_NUMERIC_ADD_SUFFIX,
+    PARSE_NUMERIC_ADD_OVERFLOW,
+    PARSE_NUMERIC_DEL_SUFFIX,
+    PARSE_NUMERIC_DEL_OVERFLOW,
+    PARSE_NUMERIC_TOP_SUFFIX,
+    PARSE_NUMERIC_TOP_OVERFLOW,
+};
+
+static const NumericCase numeric_cases[] = {
+    [PARSE_NUMERIC_ADD_SUFFIX] = {"add 5x title", "usage: add <priority> <title> [#tag ...]"},
+    [PARSE_NUMERIC_ADD_OVERFLOW] = {"add 999999999999999999999 title", "usage: add <priority> <title> [#tag ...]"},
+    [PARSE_NUMERIC_DEL_SUFFIX] = {"del 1x", "invalid id 1x"},
+    [PARSE_NUMERIC_DEL_OVERFLOW] = {"del 999999999999999999999", "invalid id 999999999999999999999"},
+    [PARSE_NUMERIC_TOP_SUFFIX] = {"top 1x", "expected an unsigned int <n>"},
+    [PARSE_NUMERIC_TOP_OVERFLOW] = {"top 999999999999999999999", "expected an unsigned int <n>"},
+};
+
 static void test_cli_numeric_tokens(gconstpointer data)
 {
-    const guint i = GPOINTER_TO_UINT(data);
+    const NumericCase *test_case = data;
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GString) output = g_string_new(NULL);
-    const struct
-    {
-        const gchar *command;
-        const gchar *message;
-    } cases[] = {
-        {"add 5x title", "usage: add <priority> <title> [#tag ...]"},
-        {"add 999999999999999999999 title", "usage: add <priority> <title> [#tag ...]"},
-        {"del 1x", "invalid id 1x"},
-        {"del 999999999999999999999", "invalid id 999999999999999999999"},
-        {"top 1x", "expected an unsigned int <n>"},
-        {"top 999999999999999999999", "expected an unsigned int <n>"},
-    };
     g_autoptr(GError) error = NULL;
-    g_test_message("%s", cases[i].command);
-    g_assert_cmpint(cli_execute_line(manager, cases[i].command, output, &error), ==, CLI_CONTINUE);
+    g_test_message("%s", test_case->command);
+    g_assert_cmpint(cli_execute_line(manager, test_case->command, output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-    g_assert_cmpstr(error->message, ==, cases[i].message);
+    g_assert_cmpstr(error->message, ==, test_case->message);
     g_assert_cmpstr(output->str, ==, "");
     g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 0);
 }
@@ -346,9 +371,34 @@ static void test_cli_tag_duplicate(void)
     g_ptr_array_unref(matches_after_duplicate);
 }
 
+enum
+{
+    TAG_INVALID_MISSING_ARGUMENTS,
+    TAG_INVALID_MISSING_TAG,
+    TAG_INVALID_EXTRA_ARGUMENT,
+    TAG_INVALID_NON_NUMERIC_ID,
+    TAG_INVALID_ZERO_ID,
+    TAG_INVALID_MISSING_HASH,
+    TAG_INVALID_UPPERCASE_TAG,
+    TAG_INVALID_EMPTY_TAG,
+    TAG_UNKNOWN_ID,
+};
+
+static const InvalidCase tag_cases[] = {
+    [TAG_INVALID_MISSING_ARGUMENTS] = {"tag", cli_error_quark, CLI_ERROR_USAGE},
+    [TAG_INVALID_MISSING_TAG] = {"tag 1", cli_error_quark, CLI_ERROR_USAGE},
+    [TAG_INVALID_EXTRA_ARGUMENT] = {"tag 1 #work extra", cli_error_quark, CLI_ERROR_USAGE},
+    [TAG_INVALID_NON_NUMERIC_ID] = {"tag abc #work", cli_error_quark, CLI_ERROR_USAGE},
+    [TAG_INVALID_ZERO_ID] = {"tag 0 #work", cli_error_quark, CLI_ERROR_USAGE},
+    [TAG_INVALID_MISSING_HASH] = {"tag 1 work", cli_error_quark, CLI_ERROR_USAGE},
+    [TAG_INVALID_UPPERCASE_TAG] = {"tag 1 #Bad", task_error_quark, TASK_ERROR_INVALID_TAG},
+    [TAG_INVALID_EMPTY_TAG] = {"tag 1 #", task_error_quark, TASK_ERROR_INVALID_TAG},
+    [TAG_UNKNOWN_ID] = {"tag 999 #work", task_manager_error_quark, TM_ERROR_TASK_NOT_FOUND},
+};
+
 static void test_cli_tag_invalid(gconstpointer data)
 {
-    const guint i = GPOINTER_TO_UINT(data);
+    const InvalidCase *test_case = data;
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -359,28 +409,11 @@ static void test_cli_tag_invalid(gconstpointer data)
     g_assert_no_error(error);
     g_assert_cmpuint(id, ==, 1);
 
-    const struct
-    {
-        const gchar *command;
-        GQuark domain;
-        gint code;
-    } cases[] = {
-        {"tag", CLI_ERROR, CLI_ERROR_USAGE},
-        {"tag 1", CLI_ERROR, CLI_ERROR_USAGE},
-        {"tag 1 #work extra", CLI_ERROR, CLI_ERROR_USAGE},
-        {"tag abc #work", CLI_ERROR, CLI_ERROR_USAGE},
-        {"tag 0 #work", CLI_ERROR, CLI_ERROR_USAGE},
-        {"tag 1 work", CLI_ERROR, CLI_ERROR_USAGE},
-        {"tag 1 #Bad", TASK_ERROR, TASK_ERROR_INVALID_TAG},
-        {"tag 1 #", TASK_ERROR, TASK_ERROR_INVALID_TAG},
-        {"tag 999 #work", TM_ERROR, TM_ERROR_TASK_NOT_FOUND},
-    };
+    g_test_message("%s", test_case->command);
 
-    g_test_message("%s", cases[i].command);
-
-    CliStatus status = cli_execute_line(manager, cases[i].command, output, &error);
+    CliStatus status = cli_execute_line(manager, test_case->command, output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, cases[i].domain, cases[i].code);
+    g_assert_error(error, test_case->domain(), test_case->code);
     g_clear_error(&error);
     g_assert_cmpstr(output->str, ==, "");
 
@@ -465,9 +498,34 @@ static void test_cli_untag(void)
     task_manager_free(manager);
 }
 
+enum
+{
+    UNTAG_INVALID_MISSING_ARGUMENTS,
+    UNTAG_INVALID_MISSING_TAG,
+    UNTAG_INVALID_EXTRA_ARGUMENT,
+    UNTAG_INVALID_NON_NUMERIC_ID,
+    UNTAG_INVALID_ZERO_ID,
+    UNTAG_INVALID_MISSING_HASH,
+    UNTAG_INVALID_UPPERCASE_TAG,
+    UNTAG_INVALID_EMPTY_TAG,
+    UNTAG_UNKNOWN_ID,
+};
+
+static const InvalidCase untag_cases[] = {
+    [UNTAG_INVALID_MISSING_ARGUMENTS] = {"untag", cli_error_quark, CLI_ERROR_USAGE},
+    [UNTAG_INVALID_MISSING_TAG] = {"untag 1", cli_error_quark, CLI_ERROR_USAGE},
+    [UNTAG_INVALID_EXTRA_ARGUMENT] = {"untag 1 #work extra", cli_error_quark, CLI_ERROR_USAGE},
+    [UNTAG_INVALID_NON_NUMERIC_ID] = {"untag abc #work", cli_error_quark, CLI_ERROR_USAGE},
+    [UNTAG_INVALID_ZERO_ID] = {"untag 0 #work", cli_error_quark, CLI_ERROR_USAGE},
+    [UNTAG_INVALID_MISSING_HASH] = {"untag 1 work", cli_error_quark, CLI_ERROR_USAGE},
+    [UNTAG_INVALID_UPPERCASE_TAG] = {"untag 1 #Bad", task_error_quark, TASK_ERROR_INVALID_TAG},
+    [UNTAG_INVALID_EMPTY_TAG] = {"untag 1 #", task_error_quark, TASK_ERROR_INVALID_TAG},
+    [UNTAG_UNKNOWN_ID] = {"untag 999 #work", task_manager_error_quark, TM_ERROR_TASK_NOT_FOUND},
+};
+
 static void test_cli_untag_invalid(gconstpointer data)
 {
-    const guint i = GPOINTER_TO_UINT(data);
+    const InvalidCase *test_case = data;
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -481,28 +539,11 @@ static void test_cli_untag_invalid(gconstpointer data)
     g_assert_true(task_manager_tag_task(manager, id, "work", &error));
     g_assert_no_error(error);
 
-    const struct
-    {
-        const gchar *command;
-        GQuark domain;
-        gint code;
-    } cases[] = {
-        {"untag", CLI_ERROR, CLI_ERROR_USAGE},
-        {"untag 1", CLI_ERROR, CLI_ERROR_USAGE},
-        {"untag 1 #work extra", CLI_ERROR, CLI_ERROR_USAGE},
-        {"untag abc #work", CLI_ERROR, CLI_ERROR_USAGE},
-        {"untag 0 #work", CLI_ERROR, CLI_ERROR_USAGE},
-        {"untag 1 work", CLI_ERROR, CLI_ERROR_USAGE},
-        {"untag 1 #Bad", TASK_ERROR, TASK_ERROR_INVALID_TAG},
-        {"untag 1 #", TASK_ERROR, TASK_ERROR_INVALID_TAG},
-        {"untag 999 #work", TM_ERROR, TM_ERROR_TASK_NOT_FOUND},
-    };
+    g_test_message("%s", test_case->command);
 
-    g_test_message("%s", cases[i].command);
-
-    CliStatus status = cli_execute_line(manager, cases[i].command, output, &error);
+    CliStatus status = cli_execute_line(manager, test_case->command, output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, cases[i].domain, cases[i].code);
+    g_assert_error(error, test_case->domain(), test_case->code);
     g_clear_error(&error);
     g_assert_cmpstr(output->str, ==, "");
 
@@ -558,9 +599,26 @@ static void test_cli_enqueue(void)
     task_manager_free(manager);
 }
 
+enum
+{
+    ENQUEUE_INVALID_MISSING_ID,
+    ENQUEUE_INVALID_EXTRA_ARGUMENT,
+    ENQUEUE_INVALID_NON_NUMERIC_ID,
+    ENQUEUE_INVALID_ZERO_ID,
+    ENQUEUE_UNKNOWN_ID,
+};
+
+static const InvalidCase enqueue_cases[] = {
+    [ENQUEUE_INVALID_MISSING_ID] = {"enqueue", cli_error_quark, CLI_ERROR_USAGE},
+    [ENQUEUE_INVALID_EXTRA_ARGUMENT] = {"enqueue 1 2", cli_error_quark, CLI_ERROR_USAGE},
+    [ENQUEUE_INVALID_NON_NUMERIC_ID] = {"enqueue abc", cli_error_quark, CLI_ERROR_USAGE},
+    [ENQUEUE_INVALID_ZERO_ID] = {"enqueue 0", cli_error_quark, CLI_ERROR_USAGE},
+    [ENQUEUE_UNKNOWN_ID] = {"enqueue 999", task_manager_error_quark, TM_ERROR_TASK_NOT_FOUND},
+};
+
 static void test_cli_enqueue_invalid(gconstpointer data)
 {
-    const guint i = GPOINTER_TO_UINT(data);
+    const InvalidCase *test_case = data;
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -571,24 +629,11 @@ static void test_cli_enqueue_invalid(gconstpointer data)
     g_assert_no_error(error);
     g_assert_cmpuint(id, ==, 1);
 
-    const struct
-    {
-        const gchar *command;
-        GQuark domain;
-        gint code;
-    } cases[] = {
-        {"enqueue", CLI_ERROR, CLI_ERROR_USAGE},
-        {"enqueue 1 2", CLI_ERROR, CLI_ERROR_USAGE},
-        {"enqueue abc", CLI_ERROR, CLI_ERROR_USAGE},
-        {"enqueue 0", CLI_ERROR, CLI_ERROR_USAGE},
-        {"enqueue 999", TM_ERROR, TM_ERROR_TASK_NOT_FOUND},
-    };
+    g_test_message("%s", test_case->command);
 
-    g_test_message("%s", cases[i].command);
-
-    CliStatus status = cli_execute_line(manager, cases[i].command, output, &error);
+    CliStatus status = cli_execute_line(manager, test_case->command, output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, cases[i].domain, cases[i].code);
+    g_assert_error(error, test_case->domain(), test_case->code);
     g_clear_error(&error);
     g_assert_cmpstr(output->str, ==, "");
 
@@ -742,9 +787,22 @@ static void test_cli_find_multiple_matches(void)
                   g_str_equal(output->str, "id: 2, priority: 7, title: second\nid: 1, priority: 5, title: first\n"));
 }
 
+enum
+{
+    FIND_INVALID_MISSING_TAG,
+    FIND_INVALID_EXTRA_ARGUMENT,
+    FIND_INVALID_MISSING_HASH,
+};
+
+static const InvalidCase find_cases[] = {
+    [FIND_INVALID_MISSING_TAG] = {"find", cli_error_quark, CLI_ERROR_USAGE},
+    [FIND_INVALID_EXTRA_ARGUMENT] = {"find #work extra", cli_error_quark, CLI_ERROR_USAGE},
+    [FIND_INVALID_MISSING_HASH] = {"find work", cli_error_quark, CLI_ERROR_USAGE},
+};
+
 static void test_cli_find_invalid(gconstpointer data)
 {
-    const guint i = GPOINTER_TO_UINT(data);
+    const InvalidCase *test_case = data;
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -758,22 +816,11 @@ static void test_cli_find_invalid(gconstpointer data)
     g_assert_true(task_manager_tag_task(manager, id, "work", &error));
     g_assert_no_error(error);
 
-    const struct
-    {
-        const gchar *command;
-        GQuark domain;
-        gint code;
-    } cases[] = {
-        {"find", CLI_ERROR, CLI_ERROR_USAGE},
-        {"find #work extra", CLI_ERROR, CLI_ERROR_USAGE},
-        {"find work", CLI_ERROR, CLI_ERROR_USAGE},
-    };
+    g_test_message("%s", test_case->command);
 
-    g_test_message("%s", cases[i].command);
-
-    CliStatus status = cli_execute_line(manager, cases[i].command, output, &error);
+    CliStatus status = cli_execute_line(manager, test_case->command, output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, cases[i].domain, cases[i].code);
+    g_assert_error(error, test_case->domain(), test_case->code);
     g_clear_error(&error);
     g_assert_cmpstr(output->str, ==, "");
 
@@ -866,9 +913,24 @@ static void test_cli_top(void)
     task_manager_free(manager);
 }
 
+enum
+{
+    TOP_INVALID_MISSING_LIMIT,
+    TOP_INVALID_EXTRA_ARGUMENT,
+    TOP_INVALID_NON_NUMERIC,
+    TOP_INVALID_NEGATIVE,
+};
+
+static const TopInvalidCase top_cases[] = {
+    [TOP_INVALID_MISSING_LIMIT] = {"top"},
+    [TOP_INVALID_EXTRA_ARGUMENT] = {"top 1 2"},
+    [TOP_INVALID_NON_NUMERIC] = {"top abc"},
+    [TOP_INVALID_NEGATIVE] = {"top -1"},
+};
+
 static void test_cli_top_invalid(gconstpointer data)
 {
-    const guint i = GPOINTER_TO_UINT(data);
+    const TopInvalidCase *test_case = data;
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
@@ -879,16 +941,9 @@ static void test_cli_top_invalid(gconstpointer data)
     g_assert_no_error(error);
     g_assert_cmpuint(id, ==, 1);
 
-    const gchar *cases[] = {
-        "top",
-        "top 1 2",
-        "top abc",
-        "top -1",
-    };
+    g_test_message("%s", test_case->command);
 
-    g_test_message("%s", cases[i]);
-
-    CliStatus status = cli_execute_line(manager, cases[i], output, &error);
+    CliStatus status = cli_execute_line(manager, test_case->command, output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
     g_clear_error(&error);
@@ -1051,12 +1106,12 @@ int main(int argc, char **argv)
     g_test_add_data_func("/cli/basic/quit", &basic_cases[2], test_cli_basic);
     g_test_add_data_func("/cli/basic/unknown", &basic_cases[3], test_cli_basic);
 
-    g_test_add_data_func("/cli/parse/numeric/add-suffix", GUINT_TO_POINTER(0), test_cli_numeric_tokens);
-    g_test_add_data_func("/cli/parse/numeric/add-overflow", GUINT_TO_POINTER(1), test_cli_numeric_tokens);
-    g_test_add_data_func("/cli/parse/numeric/del-suffix", GUINT_TO_POINTER(2), test_cli_numeric_tokens);
-    g_test_add_data_func("/cli/parse/numeric/del-overflow", GUINT_TO_POINTER(3), test_cli_numeric_tokens);
-    g_test_add_data_func("/cli/parse/numeric/top-suffix", GUINT_TO_POINTER(4), test_cli_numeric_tokens);
-    g_test_add_data_func("/cli/parse/numeric/top-overflow", GUINT_TO_POINTER(5), test_cli_numeric_tokens);
+    g_test_add_data_func("/cli/parse/numeric/add-suffix", &numeric_cases[PARSE_NUMERIC_ADD_SUFFIX], test_cli_numeric_tokens);
+    g_test_add_data_func("/cli/parse/numeric/add-overflow", &numeric_cases[PARSE_NUMERIC_ADD_OVERFLOW], test_cli_numeric_tokens);
+    g_test_add_data_func("/cli/parse/numeric/del-suffix", &numeric_cases[PARSE_NUMERIC_DEL_SUFFIX], test_cli_numeric_tokens);
+    g_test_add_data_func("/cli/parse/numeric/del-overflow", &numeric_cases[PARSE_NUMERIC_DEL_OVERFLOW], test_cli_numeric_tokens);
+    g_test_add_data_func("/cli/parse/numeric/top-suffix", &numeric_cases[PARSE_NUMERIC_TOP_SUFFIX], test_cli_numeric_tokens);
+    g_test_add_data_func("/cli/parse/numeric/top-overflow", &numeric_cases[PARSE_NUMERIC_TOP_OVERFLOW], test_cli_numeric_tokens);
 
     g_test_add_data_func("/cli/add/multiword-title", &add_cases[0], test_cli_add);
     g_test_add_data_func("/cli/add/multiple-tags", &add_cases[1], test_cli_add);
@@ -1081,33 +1136,33 @@ int main(int argc, char **argv)
     g_test_add_func("/cli/tag/lifecycle", test_cli_tag_lifecycle);
     g_test_add_func("/cli/tag/success", test_cli_tag);
     g_test_add_func("/cli/tag/duplicate", test_cli_tag_duplicate);
-    g_test_add_data_func("/cli/tag/invalid/missing-arguments", GUINT_TO_POINTER(0), test_cli_tag_invalid);
-    g_test_add_data_func("/cli/tag/invalid/missing-tag", GUINT_TO_POINTER(1), test_cli_tag_invalid);
-    g_test_add_data_func("/cli/tag/invalid/extra-argument", GUINT_TO_POINTER(2), test_cli_tag_invalid);
-    g_test_add_data_func("/cli/tag/invalid/non-numeric-id", GUINT_TO_POINTER(3), test_cli_tag_invalid);
-    g_test_add_data_func("/cli/tag/invalid/zero-id", GUINT_TO_POINTER(4), test_cli_tag_invalid);
-    g_test_add_data_func("/cli/tag/invalid/missing-hash", GUINT_TO_POINTER(5), test_cli_tag_invalid);
-    g_test_add_data_func("/cli/tag/invalid/uppercase-tag", GUINT_TO_POINTER(6), test_cli_tag_invalid);
-    g_test_add_data_func("/cli/tag/invalid/empty-tag", GUINT_TO_POINTER(7), test_cli_tag_invalid);
-    g_test_add_data_func("/cli/tag/unknown-id", GUINT_TO_POINTER(8), test_cli_tag_invalid);
+    g_test_add_data_func("/cli/tag/invalid/missing-arguments", &tag_cases[TAG_INVALID_MISSING_ARGUMENTS], test_cli_tag_invalid);
+    g_test_add_data_func("/cli/tag/invalid/missing-tag", &tag_cases[TAG_INVALID_MISSING_TAG], test_cli_tag_invalid);
+    g_test_add_data_func("/cli/tag/invalid/extra-argument", &tag_cases[TAG_INVALID_EXTRA_ARGUMENT], test_cli_tag_invalid);
+    g_test_add_data_func("/cli/tag/invalid/non-numeric-id", &tag_cases[TAG_INVALID_NON_NUMERIC_ID], test_cli_tag_invalid);
+    g_test_add_data_func("/cli/tag/invalid/zero-id", &tag_cases[TAG_INVALID_ZERO_ID], test_cli_tag_invalid);
+    g_test_add_data_func("/cli/tag/invalid/missing-hash", &tag_cases[TAG_INVALID_MISSING_HASH], test_cli_tag_invalid);
+    g_test_add_data_func("/cli/tag/invalid/uppercase-tag", &tag_cases[TAG_INVALID_UPPERCASE_TAG], test_cli_tag_invalid);
+    g_test_add_data_func("/cli/tag/invalid/empty-tag", &tag_cases[TAG_INVALID_EMPTY_TAG], test_cli_tag_invalid);
+    g_test_add_data_func("/cli/tag/unknown-id", &tag_cases[TAG_UNKNOWN_ID], test_cli_tag_invalid);
 
     g_test_add_func("/cli/untag/success", test_cli_untag);
-    g_test_add_data_func("/cli/untag/invalid/missing-arguments", GUINT_TO_POINTER(0), test_cli_untag_invalid);
-    g_test_add_data_func("/cli/untag/invalid/missing-tag", GUINT_TO_POINTER(1), test_cli_untag_invalid);
-    g_test_add_data_func("/cli/untag/invalid/extra-argument", GUINT_TO_POINTER(2), test_cli_untag_invalid);
-    g_test_add_data_func("/cli/untag/invalid/non-numeric-id", GUINT_TO_POINTER(3), test_cli_untag_invalid);
-    g_test_add_data_func("/cli/untag/invalid/zero-id", GUINT_TO_POINTER(4), test_cli_untag_invalid);
-    g_test_add_data_func("/cli/untag/invalid/missing-hash", GUINT_TO_POINTER(5), test_cli_untag_invalid);
-    g_test_add_data_func("/cli/untag/invalid/uppercase-tag", GUINT_TO_POINTER(6), test_cli_untag_invalid);
-    g_test_add_data_func("/cli/untag/invalid/empty-tag", GUINT_TO_POINTER(7), test_cli_untag_invalid);
-    g_test_add_data_func("/cli/untag/unknown-id", GUINT_TO_POINTER(8), test_cli_untag_invalid);
+    g_test_add_data_func("/cli/untag/invalid/missing-arguments", &untag_cases[UNTAG_INVALID_MISSING_ARGUMENTS], test_cli_untag_invalid);
+    g_test_add_data_func("/cli/untag/invalid/missing-tag", &untag_cases[UNTAG_INVALID_MISSING_TAG], test_cli_untag_invalid);
+    g_test_add_data_func("/cli/untag/invalid/extra-argument", &untag_cases[UNTAG_INVALID_EXTRA_ARGUMENT], test_cli_untag_invalid);
+    g_test_add_data_func("/cli/untag/invalid/non-numeric-id", &untag_cases[UNTAG_INVALID_NON_NUMERIC_ID], test_cli_untag_invalid);
+    g_test_add_data_func("/cli/untag/invalid/zero-id", &untag_cases[UNTAG_INVALID_ZERO_ID], test_cli_untag_invalid);
+    g_test_add_data_func("/cli/untag/invalid/missing-hash", &untag_cases[UNTAG_INVALID_MISSING_HASH], test_cli_untag_invalid);
+    g_test_add_data_func("/cli/untag/invalid/uppercase-tag", &untag_cases[UNTAG_INVALID_UPPERCASE_TAG], test_cli_untag_invalid);
+    g_test_add_data_func("/cli/untag/invalid/empty-tag", &untag_cases[UNTAG_INVALID_EMPTY_TAG], test_cli_untag_invalid);
+    g_test_add_data_func("/cli/untag/unknown-id", &untag_cases[UNTAG_UNKNOWN_ID], test_cli_untag_invalid);
 
     g_test_add_func("/cli/enqueue/success", test_cli_enqueue);
-    g_test_add_data_func("/cli/enqueue/invalid/missing-id", GUINT_TO_POINTER(0), test_cli_enqueue_invalid);
-    g_test_add_data_func("/cli/enqueue/invalid/extra-argument", GUINT_TO_POINTER(1), test_cli_enqueue_invalid);
-    g_test_add_data_func("/cli/enqueue/invalid/non-numeric-id", GUINT_TO_POINTER(2), test_cli_enqueue_invalid);
-    g_test_add_data_func("/cli/enqueue/invalid/zero-id", GUINT_TO_POINTER(3), test_cli_enqueue_invalid);
-    g_test_add_data_func("/cli/enqueue/unknown-id", GUINT_TO_POINTER(4), test_cli_enqueue_invalid);
+    g_test_add_data_func("/cli/enqueue/invalid/missing-id", &enqueue_cases[ENQUEUE_INVALID_MISSING_ID], test_cli_enqueue_invalid);
+    g_test_add_data_func("/cli/enqueue/invalid/extra-argument", &enqueue_cases[ENQUEUE_INVALID_EXTRA_ARGUMENT], test_cli_enqueue_invalid);
+    g_test_add_data_func("/cli/enqueue/invalid/non-numeric-id", &enqueue_cases[ENQUEUE_INVALID_NON_NUMERIC_ID], test_cli_enqueue_invalid);
+    g_test_add_data_func("/cli/enqueue/invalid/zero-id", &enqueue_cases[ENQUEUE_INVALID_ZERO_ID], test_cli_enqueue_invalid);
+    g_test_add_data_func("/cli/enqueue/unknown-id", &enqueue_cases[ENQUEUE_UNKNOWN_ID], test_cli_enqueue_invalid);
 
     g_test_add_func("/cli/run/success", test_cli_run);
     g_test_add_func("/cli/run/invalid", test_cli_run_invalid);
@@ -1116,17 +1171,17 @@ int main(int argc, char **argv)
     g_test_add_func("/cli/find/no-matches", test_cli_find_no_matches);
     g_test_add_func("/cli/find/one-match", test_cli_find_one_match);
     g_test_add_func("/cli/find/multiple-matches", test_cli_find_multiple_matches);
-    g_test_add_data_func("/cli/find/invalid/missing-tag", GUINT_TO_POINTER(0), test_cli_find_invalid);
-    g_test_add_data_func("/cli/find/invalid/extra-argument", GUINT_TO_POINTER(1), test_cli_find_invalid);
-    g_test_add_data_func("/cli/find/invalid/missing-hash", GUINT_TO_POINTER(2), test_cli_find_invalid);
+    g_test_add_data_func("/cli/find/invalid/missing-tag", &find_cases[FIND_INVALID_MISSING_TAG], test_cli_find_invalid);
+    g_test_add_data_func("/cli/find/invalid/extra-argument", &find_cases[FIND_INVALID_EXTRA_ARGUMENT], test_cli_find_invalid);
+    g_test_add_data_func("/cli/find/invalid/missing-hash", &find_cases[FIND_INVALID_MISSING_HASH], test_cli_find_invalid);
     g_test_add_data_func("/cli/find/unmatched/uppercase-tag", "find #Bad", test_cli_find_unmatched_invalid_format);
     g_test_add_data_func("/cli/find/unmatched/empty-tag", "find #", test_cli_find_unmatched_invalid_format);
 
     g_test_add_func("/cli/top/success", test_cli_top);
-    g_test_add_data_func("/cli/top/invalid/missing-limit", GUINT_TO_POINTER(0), test_cli_top_invalid);
-    g_test_add_data_func("/cli/top/invalid/extra-argument", GUINT_TO_POINTER(1), test_cli_top_invalid);
-    g_test_add_data_func("/cli/top/invalid/non-numeric", GUINT_TO_POINTER(2), test_cli_top_invalid);
-    g_test_add_data_func("/cli/top/invalid/negative", GUINT_TO_POINTER(3), test_cli_top_invalid);
+    g_test_add_data_func("/cli/top/invalid/missing-limit", &top_cases[TOP_INVALID_MISSING_LIMIT], test_cli_top_invalid);
+    g_test_add_data_func("/cli/top/invalid/extra-argument", &top_cases[TOP_INVALID_EXTRA_ARGUMENT], test_cli_top_invalid);
+    g_test_add_data_func("/cli/top/invalid/non-numeric", &top_cases[TOP_INVALID_NON_NUMERIC], test_cli_top_invalid);
+    g_test_add_data_func("/cli/top/invalid/negative", &top_cases[TOP_INVALID_NEGATIVE], test_cli_top_invalid);
 
     g_test_add_func("/cli/history/format", test_cli_history_formats_commands);
     g_test_add_func("/cli/history/failed-command", test_cli_history_records_failed_command);
