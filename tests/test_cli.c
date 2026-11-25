@@ -822,51 +822,50 @@ static void test_cli_run_empty(void)
     g_assert_cmpstr(output->str, ==, "queue is empty\n");
 }
 
-static void test_cli_history(void)
+static void test_cli_history_formats_commands(void)
 {
-    TaskManager *manager = task_manager_new();
-    g_assert_nonnull(manager);
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
+    task_manager_record_command(manager, "add 5 first");
+    task_manager_record_command(manager, "add 7 second");
 
-    GError *error = NULL;
-    GString *output = g_string_new(NULL);
-
-    CliStatus status = cli_execute_line(manager, "history", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(manager, "history", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "");
+    g_assert_cmpstr(output->str, ==, "add 5 first\nadd 7 second\n");
+}
 
-    status = cli_execute_line(manager, "add 5 title", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-    g_string_truncate(output, 0);
-
-    status = cli_execute_line(manager, "del 999", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+static void test_cli_history_records_failed_command(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
+    g_assert_cmpint(cli_execute_line(manager, "del 999", output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
-    g_assert_cmpstr(output->str, ==, "");
 
-    for (guint i = 0; i < 2; ++i) {
-        status = cli_execute_line(manager, "history", output, &error);
-        g_assert_cmpuint(status, ==, CLI_CONTINUE);
-        g_assert_no_error(error);
-        g_assert_cmpstr(output->str, ==, "add 5 title\ndel 999\n");
-        g_string_truncate(output, 0);
-    }
+    g_assert_cmpint(cli_execute_line(manager, "history", output, &error), ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_assert_cmpstr(output->str, ==, "del 999\n");
+}
 
-    status = cli_execute_line(manager, "history extra", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+static void test_cli_history_does_not_record_history_commands(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
+    task_manager_record_command(manager, "existing");
+    g_assert_cmpint(cli_execute_line(manager, "history extra", output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
     g_clear_error(&error);
-    g_assert_cmpstr(output->str, ==, "");
 
-    status = cli_execute_line(manager, "history", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(manager, "history", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "add 5 title\ndel 999\n");
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
+    g_assert_cmpstr(output->str, ==, "existing\n");
+    g_string_truncate(output, 0);
+    g_assert_cmpint(cli_execute_line(manager, "history", output, &error), ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_assert_cmpstr(output->str, ==, "existing\n");
 }
 
 static void test_cli_history_limit(void)
@@ -1052,7 +1051,9 @@ int main(int argc, char **argv)
     g_test_add_func("/cli/run/invalid", test_cli_run_invalid);
     g_test_add_func("/cli/run/empty", test_cli_run_empty);
 
-    g_test_add_func("/cli/history", test_cli_history);
+    g_test_add_func("/cli/history/format", test_cli_history_formats_commands);
+    g_test_add_func("/cli/history/failed-command", test_cli_history_records_failed_command);
+    g_test_add_func("/cli/history/not-recorded", test_cli_history_does_not_record_history_commands);
     g_test_add_func("/cli/history-limit", test_cli_history_limit);
 
     g_test_add_func("/cli/stats", test_cli_stats);
