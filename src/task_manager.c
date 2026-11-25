@@ -243,7 +243,7 @@ gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **erro
     return TRUE;
 }
 
-Task *task_manager_run_next(TaskManager *manager)
+Task *task_manager_extract_next_task(TaskManager *manager)
 {
     if (g_queue_is_empty(manager->run_queue)) {
         return NULL;

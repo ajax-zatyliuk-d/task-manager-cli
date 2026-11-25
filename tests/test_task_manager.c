@@ -19,7 +19,7 @@ static void test_run_transfer(void)
     g_assert_nonnull(original);
     g_assert_true(task_manager_enqueue_task(manager, id, &error));
     g_assert_no_error(error);
-    g_autoptr(Task) returned = task_manager_run_next(manager);
+    g_autoptr(Task) returned = task_manager_extract_next_task(manager);
     g_assert_nonnull(returned);
     g_assert_true(returned == original);
     g_assert_true(task_add_tag(returned, "home", &error));
@@ -794,7 +794,7 @@ static void test_top_limit(gconstpointer data)
 static void test_run_empty(void)
 {
     g_autoptr(TaskManager) manager = task_manager_new();
-    g_assert_null(task_manager_run_next(manager));
+    g_assert_null(task_manager_extract_next_task(manager));
 }
 
 static void test_run_fifo(void)
@@ -810,13 +810,13 @@ static void test_run_fifo(void)
     g_assert_true(task_manager_enqueue_task(manager, second, &error));
     g_assert_no_error(error);
 
-    g_autoptr(Task) first_run = task_manager_run_next(manager);
+    g_autoptr(Task) first_run = task_manager_extract_next_task(manager);
     g_assert_nonnull(first_run);
     g_assert_cmpuint(task_get_id(first_run), ==, first);
-    g_autoptr(Task) second_run = task_manager_run_next(manager);
+    g_autoptr(Task) second_run = task_manager_extract_next_task(manager);
     g_assert_nonnull(second_run);
     g_assert_cmpuint(task_get_id(second_run), ==, second);
-    g_assert_null(task_manager_run_next(manager));
+    g_assert_null(task_manager_extract_next_task(manager));
 }
 
 static void test_run_removes_indexes(void)
@@ -830,7 +830,7 @@ static void test_run_removes_indexes(void)
     g_assert_true(task_manager_enqueue_task(manager, id, &error));
     g_assert_no_error(error);
 
-    g_autoptr(Task) task = task_manager_run_next(manager);
+    g_autoptr(Task) task = task_manager_extract_next_task(manager);
     g_assert_nonnull(task);
     g_assert_null(task_manager_find_task_by_id(manager, id, &error));
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
@@ -880,7 +880,7 @@ static void test_run_duplicated(void)
     GPtrArray *top_tasks = NULL;
 
     // Queue: task1, task2, task1. Running task1 also removes its second entry.
-    next_task = task_manager_run_next(manager);
+    next_task = task_manager_extract_next_task(manager);
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task1_id);
 
@@ -898,7 +898,7 @@ static void test_run_duplicated(void)
     task_free(next_task);
 
     // task2 is next; the queue becomes empty after it runs.
-    next_task = task_manager_run_next(manager);
+    next_task = task_manager_extract_next_task(manager);
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
 
@@ -914,7 +914,7 @@ static void test_run_duplicated(void)
     g_ptr_array_unref(top_tasks);
     task_free(next_task);
 
-    next_task = task_manager_run_next(manager);
+    next_task = task_manager_extract_next_task(manager);
     g_assert_no_error(error);
     g_assert_null(next_task);
 
@@ -971,7 +971,7 @@ static void test_run_with_delete(void)
     g_assert_no_error(error);
     g_assert_true(result);
 
-    next_task = task_manager_run_next(manager);
+    next_task = task_manager_extract_next_task(manager);
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
 

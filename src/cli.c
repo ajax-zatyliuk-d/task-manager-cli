@@ -205,7 +205,7 @@ static void cmd_run(TaskManager *manager, gchar *const *args, GString *output, G
         return;
     }
 
-    Task *task = task_manager_run_next(manager);
+    Task *task = task_manager_extract_next_task(manager);
     if (task == NULL) {
         g_string_append_printf(output, "queue is empty\n");
         return;

@@ -102,7 +102,7 @@
 - `task_manager_top_tasks(n)` повертає новий `GPtrArray` з позиченими
   `Task *` (викликач звільняє масив, не задачі); `n == 0` дає порожній масив.
 - `task_manager_enqueue_task()`: невідомий ID — `TM_ERROR_TASK_NOT_FOUND`,
-  дубль у черзі дозволений. `task_manager_run_next()` на порожній черзі
+  дубль у черзі дозволений. `task_manager_extract_next_task()` на порожній черзі
   повертає `NULL` без помилки.
 - `task_manager_remove_task()`: невідомий ID — `TM_ERROR_TASK_NOT_FOUND`.
 - Історія: CLI викликає `task_manager_record_command()` для кожного

@@ -135,7 +135,7 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
  *
  * If @error is provided, it must point to %NULL. Failure leaves the manager
  * unchanged. The borrowed task is read-only and valid while owned by @manager,
- * until removal, transfer by task_manager_run_next(), or manager destruction.
+ * until removal, transfer by task_manager_extract_next_task(), or manager destruction.
  *
  * Returns: (transfer none) (nullable): the task, or %NULL on failure; sets
  *   %TM_ERROR_TASK_NOT_FOUND if @error is provided
@@ -187,7 +187,7 @@ GPtrArray *task_manager_top_tasks(const TaskManager *manager, guint n);
 gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **error);
 
 /**
- * task_manager_run_next:
+ * task_manager_extract_next_task:
  * @manager: a task manager
  *
  * Removes the next queued task from the manager and transfers its ownership.
@@ -196,7 +196,7 @@ gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **erro
  * Returns: (transfer full) (nullable): the original task, to free with
  *   task_free(), or %NULL if the queue is empty
  */
-Task *task_manager_run_next(TaskManager *manager);
+Task *task_manager_extract_next_task(TaskManager *manager);
 
 /**
  * task_manager_record_command:
