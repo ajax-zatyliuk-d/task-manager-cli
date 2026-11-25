@@ -143,8 +143,6 @@ const gchar *task_get_tag(const Task *task, guint index)
 
 guint task_get_tag_count(const Task *task) { return task->tags->len; }
 
-gboolean task_has_tag(const Task *task, const gchar *tag) { return g_ptr_array_find_with_equal_func(task->tags, tag, g_str_equal, NULL); }
-
 gboolean task_add_tag(Task *task, const gchar *tag, GError **error)
 {
     if (!validate_new_tag(tag, task->tags, task->tags->len, error)) {

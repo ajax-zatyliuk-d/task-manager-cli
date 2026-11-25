@@ -127,15 +127,6 @@ const gchar *task_get_tag(const Task *task, guint index);
 guint task_get_tag_count(const Task *task);
 
 /**
- * task_has_tag:
- * @task: a task
- * @tag: a non-NULL, NUL-terminated tag
- *
- * Returns: %TRUE if the task contains @tag, otherwise %FALSE
- */
-gboolean task_has_tag(const Task *task, const gchar *tag);
-
-/**
  * task_add_tag:
  * @task: a task owned by the caller
  * @tag: (nullable): tag to copy
