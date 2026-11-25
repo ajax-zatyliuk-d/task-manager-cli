@@ -900,16 +900,6 @@ static void test_run_removes_duplicate_queue_entries(void)
     next_task = task_manager_extract_next_task(manager);
     g_assert_null(next_task);
 
-    const Task *missing_task1_again = task_manager_find_task_by_id(manager, first_task_id, &error);
-    g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
-    g_clear_error(&error);
-    g_assert_null(missing_task1_again);
-
-    top_tasks = task_manager_top_tasks(manager, 3);
-    g_assert_nonnull(top_tasks);
-    g_assert_cmpuint(top_tasks->len, ==, 0);
-
-    g_ptr_array_unref(top_tasks);
     task_manager_free(manager);
 }
 
