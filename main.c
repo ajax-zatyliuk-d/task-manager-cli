@@ -27,6 +27,20 @@ static void setup_terminal(void)
     }
 }
 
+static CliStatus execute_line(TaskManager *manager, const gchar *line, GString *output)
+{
+    g_autoptr(GError) error = NULL;
+    g_string_truncate(output, 0);
+    const CliStatus status = cli_execute_line(manager, line, output, &error);
+
+    g_print("%s", output->str);
+    if (error != NULL) {
+        g_printerr("error: %s\n", error->message);
+    }
+
+    return status;
+}
+
 int main(void)
 {
     setlocale(LC_CTYPE, "");
@@ -41,22 +55,12 @@ int main(void)
         const GIOStatus read_status = g_io_channel_read_line(channel, &line, NULL, NULL, &error);
 
         switch (read_status) {
-            case G_IO_STATUS_NORMAL: {
-                g_string_truncate(output, 0);
-                const CliStatus cli_status = cli_execute_line(manager, line, output, &error);
-
-                g_print("%s", output->str);
-
-                if (error != NULL) {
-                    g_printerr("error: %s\n", error->message);
-                }
-
-                if (cli_status == CLI_QUIT) {
+            case G_IO_STATUS_NORMAL:
+                if (execute_line(manager, line, output) == CLI_QUIT) {
                     return 0;
                 }
 
                 break;
-            }
             case G_IO_STATUS_EOF:
                 return 0;
             case G_IO_STATUS_ERROR:
