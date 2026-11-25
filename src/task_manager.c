@@ -169,14 +169,13 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
     }
 
     GError *task_error = NULL;
-    g_autoptr(Task) task = task_new_with_tags(id, title, priority, tags, &task_error);
+    Task *task = task_new_with_tags(id, title, priority, tags, &task_error);
     if (task == NULL) {
         propagate_task_error(error, task_error);
         return 0;
     }
     g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(id), task);
     task_manager_index_task(manager, task);
-    g_steal_pointer(&task);
 
     manager->next_id = id + 1;
     return id;
