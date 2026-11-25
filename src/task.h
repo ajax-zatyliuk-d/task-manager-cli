@@ -44,7 +44,7 @@ Task *task_new(guint id, const gchar *title, gint priority, GError **error);
  *
  * Creates an independent task with copies of its initial tags. An empty array
  * adds no tags. Tags must be non-empty, contain only [a-z0-9_], and be unique.
- * On failure, the partially created task and its copies are freed.
+ * All fields are validated before the task is created.
  *
  * Returns: (transfer full) (nullable): a task owned by the caller, or %NULL
  *   with %TASK_ERROR_INVALID_PRIORITY, %TASK_ERROR_INVALID_TAG, or

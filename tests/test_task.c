@@ -188,6 +188,22 @@ static void test_task_new_with_tags_invalid_priority(void)
     g_assert_cmpstr(g_ptr_array_index(tags, 0), ==, "work");
 }
 
+static void test_task_new_with_tags_reports_first_error(void)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GPtrArray) tags = g_ptr_array_new();
+    g_ptr_array_add(tags, "work");
+    g_ptr_array_add(tags, "work");
+    g_ptr_array_add(tags, "Bad");
+
+    g_assert_null(task_new_with_tags(1, "invalid", 0, tags, &error));
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
+    g_clear_error(&error);
+
+    g_assert_null(task_new_with_tags(1, "invalid", 5, tags, &error));
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
+}
+
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
@@ -196,6 +212,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task/new-with-tags/invalid-tag", test_task_new_with_invalid_tag);
     g_test_add_func("/task/new-with-tags/duplicate-tag", test_task_new_with_duplicate_tag);
     g_test_add_func("/task/new-with-tags/invalid-priority", test_task_new_with_tags_invalid_priority);
+    g_test_add_func("/task/new-with-tags/first-error", test_task_new_with_tags_reports_first_error);
     g_test_add_func("/task/priority/new-invalid", test_task_new_invalid_priority);
     g_test_add_func("/task/priority/set", test_task_set_priority);
     g_test_add_func("/task/priority/set-invalid", test_task_set_invalid_priority);
