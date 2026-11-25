@@ -118,6 +118,21 @@ gboolean task_manager_take_task(TaskManager *manager, Task *task, GError **error
 gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error);
 
 /**
+ * task_manager_set_task_priority:
+ * @manager: a task manager
+ * @id: task identifier
+ * @priority: priority from 1 to 10
+ * @error: (nullable): return location for a #GError, or %NULL
+ *
+ * Updates the task and its sorted position. On failure the manager is unchanged.
+ * If @error is provided, it must point to %NULL.
+ *
+ * Returns: %TRUE on success, or %FALSE with %TM_ERROR_TASK_NOT_FOUND or
+ *   %TM_ERROR_INVALID_PRIORITY if @error is provided
+ */
+gboolean task_manager_set_task_priority(TaskManager *manager, guint id, gint priority, GError **error);
+
+/**
  * task_manager_tag_task:
  * @manager: a task manager
  * @id: task identifier

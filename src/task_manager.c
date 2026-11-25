@@ -215,6 +215,24 @@ gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error
     return TRUE;
 }
 
+gboolean task_manager_set_task_priority(TaskManager *manager, guint id, gint priority, GError **error)
+{
+    Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
+    if (task == NULL) {
+        return FALSE;
+    }
+
+    GSequenceIter *it = g_sequence_lookup(manager->tasks_sorted, task, compare_tasks, NULL);
+    g_assert_nonnull(it);
+    GError *task_error = NULL;
+    if (!task_set_priority(task, priority, &task_error)) {
+        propagate_task_error(error, task_error);
+        return FALSE;
+    }
+    g_sequence_sort_changed(it, compare_tasks, NULL);
+    return TRUE;
+}
+
 gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag, GError **error)
 {
     Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
