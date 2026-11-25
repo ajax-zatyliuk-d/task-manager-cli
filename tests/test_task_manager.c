@@ -436,6 +436,45 @@ static void test_untag(void)
     task_manager_free(manager);
 }
 
+static void test_untag_borrowed_tag(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    const guint first_id = task_manager_add_task(manager, "first", 5, &error);
+    g_assert_no_error(error);
+    const guint second_id = task_manager_add_task(manager, "second", 5, &error);
+    g_assert_no_error(error);
+
+    g_assert_true(task_manager_tag_task(manager, first_id, "work", &error));
+    g_assert_no_error(error);
+    g_assert_true(task_manager_tag_task(manager, second_id, "work", &error));
+    g_assert_no_error(error);
+
+    const Task *first = task_manager_find_task_by_id(manager, first_id, &error);
+    g_assert_no_error(error);
+    const gchar *borrowed_tag = task_get_tag(first, 0);
+    g_assert_true(task_manager_untag_task(manager, first_id, borrowed_tag, &error));
+    g_assert_no_error(error);
+    g_assert_cmpuint(task_get_tag_count(first), ==, 0);
+    g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 1);
+
+    g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work", &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(matches->len, ==, 1);
+    g_assert_cmpuint(task_get_id(g_ptr_array_index(matches, 0)), ==, second_id);
+
+    const Task *second = task_manager_find_task_by_id(manager, second_id, &error);
+    g_assert_no_error(error);
+    borrowed_tag = task_get_tag(second, 0);
+    g_assert_true(task_manager_untag_task(manager, second_id, borrowed_tag, &error));
+    g_assert_no_error(error);
+    g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 0);
+
+    g_autoptr(GPtrArray) empty = task_manager_find_tasks_by_tag(manager, "work", &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(empty->len, ==, 0);
+}
+
 static void test_invalid_untag(void)
 {
     GError *error = NULL;
@@ -997,6 +1036,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/tag/find-invalid", test_find_by_invalid_tag);
 
     g_test_add_func("/task-manager/untag/valid", test_untag);
+    g_test_add_func("/task-manager/untag/borrowed-tag", test_untag_borrowed_tag);
     g_test_add_func("/task-manager/untag/invalid", test_invalid_untag);
 
     g_test_add_func("/task-manager/tag/delete", test_delete_by_valid_id);

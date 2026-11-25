@@ -252,9 +252,7 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
         return FALSE;
     }
 
-    task_add_tag(task, tag);
-    task_manager_add_tasks_by_tag(manager->tasks_by_tag, task, tag);
-    task_manager_add_unique_tags(manager->unique_tags, tag);
+    attach_tag(manager, task, tag);
 
     return TRUE;
 }
