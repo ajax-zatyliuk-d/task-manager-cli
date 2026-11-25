@@ -25,37 +25,48 @@ static gboolean parse_id(const gchar *word, guint *id, GError **error)
     return TRUE;
 }
 
-// add <priority> <title> [#tag1 #tag2 ...]
-static void cmd_add(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+static gchar *const *find_first_tag(gchar *const *words)
 {
-    gint64 priority;
-    if (args[0] == NULL || !g_ascii_string_to_signed(args[0], 10, G_MININT, G_MAXINT, &priority, NULL)) {
-        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: add <priority> <title> [#tag ...]");
-        return;
+    while (*words != NULL && (*words)[0] != '#') {
+        ++words;
     }
 
-    gchar *const *const title_words = args + 1;
-    gchar *const *first_tag = title_words;
-    while (*first_tag != NULL && (*first_tag)[0] != '#') {
-        ++first_tag;
-    }
+    return words;
+}
 
-    if (first_tag == title_words) {
-        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "missing task title");
-        return;
-    }
-
-    g_autoptr(GPtrArray) tags = g_ptr_array_new();
+static gboolean parse_add_tags(gchar *const *first_tag, GPtrArray *tags, GError **error)
+{
     for (gchar *const *word = first_tag; *word != NULL; ++word) {
         if ((*word)[0] != '#') {
             g_set_error(error, CLI_ERROR, CLI_ERROR_USAGE, "expected a tag, got: %s", *word);
-            return;
+            return FALSE;
         }
 
         g_ptr_array_add(tags, *word + 1);
     }
 
-    g_autoptr(GString) title = g_string_new(NULL);
+    return TRUE;
+}
+
+static gboolean parse_add_args(gchar *const *args, gint *priority, GString *title, GPtrArray *tags, GError **error)
+{
+    gint64 parsed_priority;
+    if (args[0] == NULL || !g_ascii_string_to_signed(args[0], 10, G_MININT, G_MAXINT, &parsed_priority, NULL)) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "usage: add <priority> <title> [#tag ...]");
+        return FALSE;
+    }
+
+    gchar *const *const title_words = args + 1;
+    gchar *const *const first_tag = find_first_tag(title_words);
+    if (first_tag == title_words) {
+        g_set_error_literal(error, CLI_ERROR, CLI_ERROR_USAGE, "missing task title");
+        return FALSE;
+    }
+
+    if (!parse_add_tags(first_tag, tags, error)) {
+        return FALSE;
+    }
+
     for (gchar *const *word = title_words; word != first_tag; ++word) {
         if (word != title_words) {
             g_string_append_c(title, ' ');
@@ -63,7 +74,21 @@ static void cmd_add(TaskManager *manager, gchar *const *args, GString *output, G
         g_string_append(title, *word);
     }
 
-    const guint task_id = task_manager_add_task_with_tags(manager, title->str, (gint)priority, tags, error);
+    *priority = (gint)parsed_priority;
+    return TRUE;
+}
+
+// add <priority> <title> [#tag1 #tag2 ...]
+static void cmd_add(TaskManager *manager, gchar *const *args, GString *output, GError **error)
+{
+    gint priority;
+    g_autoptr(GString) title = g_string_new(NULL);
+    g_autoptr(GPtrArray) tags = g_ptr_array_new();
+    if (!parse_add_args(args, &priority, title, tags, error)) {
+        return;
+    }
+
+    const guint task_id = task_manager_add_task_with_tags(manager, title->str, priority, tags, error);
     if (task_id == 0) {
         return;
     }
