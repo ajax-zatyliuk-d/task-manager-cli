@@ -20,13 +20,13 @@ static gboolean validate_priority(gint priority, GError **error)
     return TRUE;
 }
 
-static gboolean validate_new_tag(const gchar *tag, const GPtrArray *tags, guint existing_count, GError **error)
+static gboolean validate_tag_for_addition(const gchar *tag, const GPtrArray *tags, GError **error)
 {
     if (!task_validate_tag(tag, error)) {
         return FALSE;
     }
 
-    for (guint i = 0; i < existing_count; ++i) {
+    for (guint i = 0; i < tags->len; ++i) {
         if (g_str_equal(tag, g_ptr_array_index(tags, i))) {
             g_set_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
             return FALSE;
@@ -145,7 +145,7 @@ guint task_get_tag_count(const Task *task) { return task->tags->len; }
 
 gboolean task_add_tag(Task *task, const gchar *tag, GError **error)
 {
-    if (!validate_new_tag(tag, task->tags, task->tags->len, error)) {
+    if (!validate_tag_for_addition(tag, task->tags, error)) {
         return FALSE;
     }
 
