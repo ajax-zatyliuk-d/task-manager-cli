@@ -7,28 +7,43 @@
 
 #include <stddef.h>
 
+typedef struct
+{
+    const gchar *command;
+    CliStatus expected_status;
+    gboolean expect_unknown_command;
+    guint expected_history_length;
+} BasicCase;
+
 static void test_cli_basic(gconstpointer data)
 {
-    const gchar *command = data;
+    const BasicCase *test_case = data;
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
 
-    const CliStatus status = cli_execute_line(manager, command, output, &error);
-    if (g_str_equal(command, "unknown")) {
-        g_assert_cmpint(status, ==, CLI_CONTINUE);
+    const CliStatus status = cli_execute_line(manager, test_case->command, output, &error);
+
+    g_assert_cmpint(status, ==, test_case->expected_status);
+    if (test_case->expect_unknown_command) {
         g_assert_error(error, CLI_ERROR, CLI_ERROR_UNKNOWN_COMMAND);
     } else {
-        g_assert_cmpint(status, ==, g_str_equal(command, "quit") ? CLI_QUIT : CLI_CONTINUE);
         g_assert_no_error(error);
     }
     g_assert_cmpstr(output->str, ==, "");
     g_autoptr(GPtrArray) history = task_manager_get_history(manager);
-    g_assert_cmpuint(history->len, ==, g_str_equal(command, "unknown") ? 1 : 0);
+    g_assert_cmpuint(history->len, ==, test_case->expected_history_length);
     if (history->len != 0) {
-        g_assert_cmpstr(g_ptr_array_index(history, 0), ==, command);
+        g_assert_cmpstr(g_ptr_array_index(history, 0), ==, test_case->command);
     }
 }
+
+static const BasicCase basic_cases[] = {
+    {"", CLI_CONTINUE, FALSE, 0},
+    {"    ", CLI_CONTINUE, FALSE, 0},
+    {"quit", CLI_QUIT, FALSE, 0},
+    {"unknown", CLI_CONTINUE, TRUE, 1},
+};
 
 typedef struct
 {
@@ -1012,10 +1027,10 @@ static void test_cli_tag_lifecycle(void)
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
-    g_test_add_data_func("/cli/basic/empty", "", test_cli_basic);
-    g_test_add_data_func("/cli/basic/spaces", "    ", test_cli_basic);
-    g_test_add_data_func("/cli/basic/quit", "quit", test_cli_basic);
-    g_test_add_data_func("/cli/basic/unknown", "unknown", test_cli_basic);
+    g_test_add_data_func("/cli/basic/empty", &basic_cases[0], test_cli_basic);
+    g_test_add_data_func("/cli/basic/spaces", &basic_cases[1], test_cli_basic);
+    g_test_add_data_func("/cli/basic/quit", &basic_cases[2], test_cli_basic);
+    g_test_add_data_func("/cli/basic/unknown", &basic_cases[3], test_cli_basic);
 
     g_test_add_func("/cli/numeric-tokens", test_cli_numeric_tokens);
     g_test_add_func("/cli/tag-lifecycle", test_cli_tag_lifecycle);

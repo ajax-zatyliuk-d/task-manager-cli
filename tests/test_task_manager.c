@@ -819,9 +819,11 @@ static void test_run_duplicated(void)
     g_assert_nonnull(manager);
 
     guint task1_id = task_manager_add_task(manager, title1, priority5, &error);
-    guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
-
     g_assert_no_error(error);
+    g_assert_cmpuint(task1_id, !=, 0);
+    guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(task2_id, !=, 0);
 
     gboolean result = FALSE;
     result = task_manager_enqueue_task(manager, task1_id, &error);
@@ -839,7 +841,7 @@ static void test_run_duplicated(void)
     Task *next_task = NULL;
     GPtrArray *top_tasks = NULL;
 
-    // run task1
+    // Queue: task1, task2, task1. Running task1 also removes its second entry.
     next_task = task_manager_run_next(manager);
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task1_id);
@@ -857,7 +859,7 @@ static void test_run_duplicated(void)
     g_ptr_array_unref(top_tasks);
     task_free(next_task);
 
-    // run task2
+    // task2 is next; the queue becomes empty after it runs.
     next_task = task_manager_run_next(manager);
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_id(next_task), ==, task2_id);
@@ -874,7 +876,6 @@ static void test_run_duplicated(void)
     g_ptr_array_unref(top_tasks);
     task_free(next_task);
 
-    // run epmty
     next_task = task_manager_run_next(manager);
     g_assert_no_error(error);
     g_assert_null(next_task);
@@ -905,9 +906,11 @@ static void test_run_with_delete(void)
     g_assert_nonnull(manager);
 
     guint task1_id = task_manager_add_task(manager, title1, priority5, &error);
-    guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
-
     g_assert_no_error(error);
+    g_assert_cmpuint(task1_id, !=, 0);
+    guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(task2_id, !=, 0);
 
     gboolean result = FALSE;
     result = task_manager_enqueue_task(manager, task1_id, &error);
@@ -925,7 +928,7 @@ static void test_run_with_delete(void)
     Task *next_task = NULL;
     GPtrArray *top_tasks = NULL;
 
-    // delete task1 and run next - get task2
+    // Queue: task1, task2, task1. Deleting task1 leaves task2 as the next entry.
     result = task_manager_remove_task(manager, task1_id, &error);
     g_assert_no_error(error);
     g_assert_true(result);
