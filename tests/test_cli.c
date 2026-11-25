@@ -204,11 +204,11 @@ static void test_cli_add_id_exhausted(void)
 
 static void test_cli_del(void)
 {
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id = task_manager_add_task(manager, "title", 5, &error);
     g_assert_no_error(error);
@@ -226,9 +226,6 @@ static void test_cli_del(void)
 
     TaskManagerStats stats = task_manager_get_stats(manager);
     g_assert_cmpuint(stats.tasks, ==, 0);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 typedef struct
@@ -248,11 +245,11 @@ static const DelInvalidCase del_invalid_cases[] = {
 static void test_cli_del_invalid(gconstpointer data)
 {
     const DelInvalidCase *test_case = data;
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id = task_manager_add_task(manager, "title", 5, &error);
     g_assert_no_error(error);
@@ -274,9 +271,6 @@ static void test_cli_del_invalid(gconstpointer data)
     const Task *task = task_manager_find_task_by_id(manager, id, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_tag_lifecycle(void)
@@ -309,11 +303,11 @@ static void test_cli_tag_lifecycle(void)
 
 static void test_cli_tag(void)
 {
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id = task_manager_add_task(manager, "title", 5, &error);
     g_assert_no_error(error);
@@ -330,17 +324,13 @@ static void test_cli_tag(void)
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
     g_assert_cmpstr(task_get_tag_at(task, 0), ==, "work");
 
-    GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work");
+    g_autoptr(GPtrArray) tasks = task_manager_find_tasks_by_tag(manager, "work");
     g_assert_nonnull(tasks);
     g_assert_cmpuint(tasks->len, ==, 1);
     g_assert_true(g_ptr_array_index(tasks, 0) == task);
 
     TaskManagerStats stats = task_manager_get_stats(manager);
     g_assert_cmpuint(stats.tasks, ==, 1);
-    g_ptr_array_unref(tasks);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_tag_duplicate(void)
@@ -360,7 +350,7 @@ static void test_cli_tag_duplicate(void)
     g_clear_error(&error);
     g_assert_cmpstr(output->str, ==, "");
 
-    GPtrArray *matches_after_duplicate = task_manager_find_tasks_by_tag(manager, "work");
+    g_autoptr(GPtrArray) matches_after_duplicate = task_manager_find_tasks_by_tag(manager, "work");
     g_assert_nonnull(matches_after_duplicate);
     g_assert_cmpuint(matches_after_duplicate->len, ==, 1);
 
@@ -368,7 +358,6 @@ static void test_cli_tag_duplicate(void)
     g_assert_cmpuint(task_get_id(tagged_task), ==, 1);
     g_assert_cmpuint(task_get_tag_count(tagged_task), ==, 1);
     g_assert_cmpstr(task_get_tag_at(tagged_task, 0), ==, "work");
-    g_ptr_array_unref(matches_after_duplicate);
 }
 
 enum
@@ -399,11 +388,11 @@ static const InvalidCase tag_cases[] = {
 static void test_cli_tag_invalid(gconstpointer data)
 {
     const InvalidCase *test_case = data;
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id = task_manager_add_task(manager, "title", 5, &error);
     g_assert_no_error(error);
@@ -425,22 +414,18 @@ static void test_cli_tag_invalid(gconstpointer data)
     g_assert_nonnull(task);
     g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 
-    GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work");
+    g_autoptr(GPtrArray) tasks = task_manager_find_tasks_by_tag(manager, "work");
     g_assert_nonnull(tasks);
     g_assert_cmpuint(tasks->len, ==, 0);
-    g_ptr_array_unref(tasks);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_untag(void)
 {
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id1 = task_manager_add_task(manager, "first", 5, &error);
     g_assert_no_error(error);
@@ -493,9 +478,6 @@ static void test_cli_untag(void)
 
     TaskManagerStats stats = task_manager_get_stats(manager);
     g_assert_cmpuint(stats.tasks, ==, 2);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 enum
@@ -526,11 +508,11 @@ static const InvalidCase untag_cases[] = {
 static void test_cli_untag_invalid(gconstpointer data)
 {
     const InvalidCase *test_case = data;
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id = task_manager_add_task(manager, "title", 5, &error);
     g_assert_no_error(error);
@@ -556,23 +538,19 @@ static void test_cli_untag_invalid(gconstpointer data)
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
     g_assert_cmpstr(task_get_tag_at(task, 0), ==, "work");
 
-    GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work");
+    g_autoptr(GPtrArray) tasks = task_manager_find_tasks_by_tag(manager, "work");
     g_assert_nonnull(tasks);
     g_assert_cmpuint(tasks->len, ==, 1);
     g_assert_true(g_ptr_array_index(tasks, 0) == task);
-    g_ptr_array_unref(tasks);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_enqueue(void)
 {
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id = task_manager_add_task(manager, "title", 5, &error);
     g_assert_no_error(error);
@@ -594,9 +572,6 @@ static void test_cli_enqueue(void)
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_cmpstr(task_get_title(task), ==, "title");
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 enum
@@ -619,11 +594,11 @@ static const InvalidCase enqueue_cases[] = {
 static void test_cli_enqueue_invalid(gconstpointer data)
 {
     const InvalidCase *test_case = data;
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id = task_manager_add_task(manager, "title", 5, &error);
     g_assert_no_error(error);
@@ -645,18 +620,15 @@ static void test_cli_enqueue_invalid(gconstpointer data)
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_cmpstr(task_get_title(task), ==, "title");
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_run(void)
 {
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id1 = task_manager_add_task(manager, "first", 3, &error);
     g_assert_no_error(error);
@@ -706,9 +678,6 @@ static void test_cli_run(void)
     stats = task_manager_get_stats(manager);
     g_assert_cmpuint(stats.tasks, ==, 0);
     g_assert_cmpuint(stats.queue_length, ==, 0);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_run_invalid(void)
@@ -803,11 +772,11 @@ static const InvalidCase find_cases[] = {
 static void test_cli_find_invalid(gconstpointer data)
 {
     const InvalidCase *test_case = data;
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id = task_manager_add_task(manager, "title", 5, &error);
     g_assert_no_error(error);
@@ -835,14 +804,10 @@ static void test_cli_find_invalid(gconstpointer data)
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
     g_assert_cmpstr(task_get_tag_at(task, 0), ==, "work");
 
-    GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work");
+    g_autoptr(GPtrArray) tasks = task_manager_find_tasks_by_tag(manager, "work");
     g_assert_nonnull(tasks);
     g_assert_cmpuint(tasks->len, ==, 1);
     g_assert_true(g_ptr_array_index(tasks, 0) == task);
-    g_ptr_array_unref(tasks);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_find_unmatched_invalid_format(gconstpointer data)
@@ -863,11 +828,11 @@ static void test_cli_find_unmatched_invalid_format(gconstpointer data)
 
 static void test_cli_top(void)
 {
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     CliStatus status = cli_execute_line(manager, "top 2", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
@@ -908,9 +873,6 @@ static void test_cli_top(void)
         TaskManagerStats stats = task_manager_get_stats(manager);
         g_assert_cmpuint(stats.tasks, ==, 3);
     }
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 enum
@@ -931,11 +893,11 @@ static const TopInvalidCase top_cases[] = {
 static void test_cli_top_invalid(gconstpointer data)
 {
     const TopInvalidCase *test_case = data;
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     guint id = task_manager_add_task(manager, "title", 5, &error);
     g_assert_no_error(error);
@@ -957,9 +919,6 @@ static void test_cli_top_invalid(gconstpointer data)
     g_assert_nonnull(task);
     g_assert_cmpstr(task_get_title(task), ==, "title");
     g_assert_cmpint(task_get_priority(task), ==, 5);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_history_formats_commands(void)
@@ -1010,11 +969,11 @@ static void test_cli_history_does_not_record_history_commands(void)
 
 static void test_cli_history_limit(void)
 {
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     for (guint i = 1; i <= 11; ++i) {
         gchar *command = g_strdup_printf("add 5 task%u", i);
@@ -1041,18 +1000,15 @@ static void test_cli_history_limit(void)
         "add 5 task9\n"
         "add 5 task10\n"
         "add 5 task11\n");
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_stats(void)
 {
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
-    GString *output = g_string_new(NULL);
+    g_autoptr(GString) output = g_string_new(NULL);
 
     CliStatus status = cli_execute_line(manager, "stats", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
@@ -1082,9 +1038,6 @@ static void test_cli_stats(void)
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "tasks: 2\ntags: 1\nqueue: 1\n");
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_stats_invalid(void)

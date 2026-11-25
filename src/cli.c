@@ -214,15 +214,13 @@ static void cmd_run(TaskManager *manager, gchar *const *args, GString *output, G
         return;
     }
 
-    Task *task = task_manager_extract_next_task(manager);
+    g_autoptr(Task) task = task_manager_extract_next_task(manager);
     if (task == NULL) {
         g_string_append_printf(output, "queue is empty\n");
         return;
     }
 
     g_string_append_printf(output, "running: %s (id %u, priority %d)\n", task_get_title(task), task_get_id(task), task_get_priority(task));
-
-    task_free(task);
 }
 
 static void cmd_find(TaskManager *manager, gchar *const *args, GString *output, GError **error)

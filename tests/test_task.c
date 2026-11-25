@@ -11,7 +11,7 @@ static void test_task_new(void)
     guint id = 1;
     gint priority = 5;
 
-    Task *task = task_new(id, title, priority, NULL);
+    g_autoptr(Task) task = task_new(id, title, priority, NULL);
     g_assert_nonnull(task);
     g_assert_nonnull(task_get_title(task));
 
@@ -22,8 +22,6 @@ static void test_task_new(void)
 
     title[0] = 'X';
     g_assert_cmpstr(task_get_title(task), ==, "Test Task");
-
-    task_free(task);
 }
 
 static void test_task_new_with_tags(void)

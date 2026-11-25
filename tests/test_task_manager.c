@@ -15,7 +15,7 @@ static void test_add_find(void)
     gchar *title_second = "Second";
     gint priority_second = 10;
 
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     guint id_first = task_manager_add_task(manager, title_first, priority_first, &error);
@@ -41,13 +41,11 @@ static void test_add_find(void)
     g_assert_cmpuint(task_get_id(task_second), ==, 2);
     g_assert_cmpint(task_get_priority(task_second), ==, priority_second);
     g_assert_cmpstr(task_get_title(task_second), ==, title_second);
-
-    task_manager_free(manager);
 }
 
 static void test_add_id_exhausted(void)
 {
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     GError *error = NULL;
@@ -75,8 +73,6 @@ static void test_add_id_exhausted(void)
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_cmpstr(task_get_title(task), ==, "Last task");
-
-    task_manager_free(manager);
 }
 
 static void test_add_exhausted_before_validation(void)
@@ -114,7 +110,7 @@ static void test_add_rejects_invalid_priority_without_consuming_id(void)
     gint big_priority = 11;
     gint small_priority = 0;
 
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     guint id = task_manager_add_task(manager, title, big_priority, &error);
@@ -142,8 +138,6 @@ static void test_add_rejects_invalid_priority_without_consuming_id(void)
     g_assert_cmpuint(task_get_id(task), ==, 1);
     g_assert_cmpint(task_get_priority(task), ==, priority);
     g_assert_cmpstr(task_get_title(task), ==, title);
-
-    task_manager_free(manager);
 }
 
 static void test_add_with_tags_atomic(gconstpointer data)
@@ -216,7 +210,7 @@ static void test_remove_removes_task_from_indexes(void)
     gint priority2 = 5;
     gboolean result = FALSE;
 
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     guint task1_id = task_manager_add_task(manager, title1, priority1, &error);
@@ -241,23 +235,19 @@ static void test_remove_removes_task_from_indexes(void)
     g_assert_no_error(error);
     g_assert_true(result);
 
-    GPtrArray *unique_tag = task_manager_find_tasks_by_tag(manager, second_tag);
+    g_autoptr(GPtrArray) unique_tag = task_manager_find_tasks_by_tag(manager, second_tag);
     g_assert_nonnull(unique_tag);
     g_assert_cmpint(unique_tag->len, ==, 0);
-    g_ptr_array_unref(unique_tag);
 
-    GPtrArray *default_tag = task_manager_find_tasks_by_tag(manager, tag);
+    g_autoptr(GPtrArray) default_tag = task_manager_find_tasks_by_tag(manager, tag);
     g_assert_cmpint(default_tag->len, ==, 1);
     g_assert_true(g_ptr_array_index(default_tag, 0) == task2);
-    g_ptr_array_unref(default_tag);
 
     GPtrArray *tasks_after_delete = task_manager_top_tasks(manager, 1);
     g_assert_nonnull(tasks_after_delete);
     g_assert_cmpuint(tasks_after_delete->len, ==, 1);
     g_assert_cmpuint(task_get_id(g_ptr_array_index(tasks_after_delete, 0)), ==, task2_id);
     g_ptr_array_unref(tasks_after_delete);
-
-    task_manager_free(manager);
 }
 
 static void test_remove_unknown_id(void)
@@ -300,7 +290,7 @@ static void test_remove_does_not_reuse_id(void)
 static void test_remove_removes_all_queue_entries(void)
 {
     GError *error = NULL;
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     guint first_task_id = task_manager_add_task(manager, "first", 5, &error);
@@ -344,8 +334,6 @@ static void test_remove_removes_all_queue_entries(void)
 
     g_ptr_array_unref(top_tasks);
     task_free(next_task);
-
-    task_manager_free(manager);
 }
 
 static void test_tag_adds_tag(void)
@@ -601,7 +589,7 @@ static void test_find_by_id_reports_missing_task(void)
 
     guint id = 50;
 
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     const Task *task = task_manager_find_task_by_id(manager, id, &error);
@@ -611,8 +599,6 @@ static void test_find_by_id_reports_missing_task(void)
 
     task = task_manager_find_task_by_id(manager, id, NULL);
     g_assert_null(task);
-
-    task_manager_free(manager);
 }
 
 static void test_find_by_tag(void)
@@ -628,7 +614,7 @@ static void test_find_by_tag(void)
     const gchar *title2 = "set";
     gint priority2 = 5;
 
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     guint task1_id = task_manager_add_task(manager, title1, priority1, &error);
@@ -651,25 +637,20 @@ static void test_find_by_tag(void)
     g_assert_true(task_manager_tag_task(manager, task2_id, tag_other, &error));
     g_assert_no_error(error);
 
-    GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, tag);
+    g_autoptr(GPtrArray) tasks = task_manager_find_tasks_by_tag(manager, tag);
     g_assert_nonnull(tasks);
     g_assert_cmpint(tasks->len, ==, 2);
     g_assert_true(g_ptr_array_find(tasks, task1, NULL));
     g_assert_true(g_ptr_array_find(tasks, task2, NULL));
-    g_ptr_array_unref(tasks);
 
-    GPtrArray *other_tasks = task_manager_find_tasks_by_tag(manager, tag_other);
+    g_autoptr(GPtrArray) other_tasks = task_manager_find_tasks_by_tag(manager, tag_other);
     g_assert_nonnull(other_tasks);
     g_assert_cmpint(other_tasks->len, ==, 1);
     g_assert_true(g_ptr_array_index(other_tasks, 0) == task2);
-    g_ptr_array_unref(other_tasks);
 
-    GPtrArray *no_tasks = task_manager_find_tasks_by_tag(manager, unused_tag);
+    g_autoptr(GPtrArray) no_tasks = task_manager_find_tasks_by_tag(manager, unused_tag);
     g_assert_nonnull(no_tasks);
     g_assert_cmpuint(no_tasks->len, ==, 0);
-    g_ptr_array_unref(no_tasks);
-
-    task_manager_free(manager);
 }
 
 static void test_find_by_tag_returns_independent_array(void)
@@ -840,7 +821,7 @@ static void test_run_transfer(void)
 static void test_run_removes_duplicate_queue_entries(void)
 {
     GError *error = NULL;
-    TaskManager *manager = task_manager_new();
+    g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
 
     guint first_task_id = task_manager_add_task(manager, "first", 5, &error);
@@ -899,8 +880,6 @@ static void test_run_removes_duplicate_queue_entries(void)
 
     next_task = task_manager_extract_next_task(manager);
     g_assert_null(next_task);
-
-    task_manager_free(manager);
 }
 
 static void test_history_empty(void)
