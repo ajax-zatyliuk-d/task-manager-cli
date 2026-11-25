@@ -7,70 +7,27 @@
 
 #include <stddef.h>
 
-static void test_cli_base(void)
+static void test_cli_basic(gconstpointer data)
 {
-    TaskManager *manager = task_manager_new();
-    g_assert_nonnull(manager);
+    const gchar *command = data;
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
 
-    CliStatus status;
-    GError *error = NULL;
-    GPtrArray *history;
-    GString *result = g_string_new(NULL);
-    const gchar *string = "test 1 2 #d";
-
-    // empty cmd
-    status = cli_execute_line(manager, "", result, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-
-    history = task_manager_get_history(manager);
-    g_assert_nonnull(history);
-    g_assert_cmpuint(history->len, ==, 0);
-    g_assert_cmpstr(result->str, ==, "");
-
-    g_ptr_array_unref(history);
-
-    // spaces cmd
-    status = cli_execute_line(manager, "    ", result, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-
-    history = task_manager_get_history(manager);
-    g_assert_nonnull(history);
-    g_assert_cmpuint(history->len, ==, 0);
-    g_assert_cmpstr(result->str, ==, "");
-
-    g_ptr_array_unref(history);
-
-    // quit cmd
-    status = cli_execute_line(manager, "quit", result, &error);
-    g_assert_cmpuint(status, ==, CLI_QUIT);
-    g_assert_no_error(error);
-
-    history = task_manager_get_history(manager);
-    g_assert_nonnull(history);
-    g_assert_cmpuint(history->len, ==, 0);
-    g_assert_cmpstr(result->str, ==, "");
-
-    g_ptr_array_unref(history);
-
-    // random cmd
-    status = cli_execute_line(manager, string, result, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, CLI_ERROR, CLI_ERROR_UNKNOWN_COMMAND);
-    g_clear_error(&error);
-
-    g_assert_cmpstr(result->str, ==, "");
-    history = task_manager_get_history(manager);
-    g_assert_nonnull(history);
-    g_assert_cmpuint(history->len, ==, 1);
-    g_assert_cmpstr(history->pdata[0], ==, string);
-    g_assert_cmpstr(result->str, ==, "");
-
-    g_string_free(result, TRUE);
-    g_ptr_array_unref(history);
-
-    task_manager_free(manager);
+    const CliStatus status = cli_execute_line(manager, command, output, &error);
+    if (g_str_equal(command, "unknown")) {
+        g_assert_cmpint(status, ==, CLI_CONTINUE);
+        g_assert_error(error, CLI_ERROR, CLI_ERROR_UNKNOWN_COMMAND);
+    } else {
+        g_assert_cmpint(status, ==, g_str_equal(command, "quit") ? CLI_QUIT : CLI_CONTINUE);
+        g_assert_no_error(error);
+    }
+    g_assert_cmpstr(output->str, ==, "");
+    g_autoptr(GPtrArray) history = task_manager_get_history(manager);
+    g_assert_cmpuint(history->len, ==, g_str_equal(command, "unknown") ? 1 : 0);
+    if (history->len != 0) {
+        g_assert_cmpstr(g_ptr_array_index(history, 0), ==, command);
+    }
 }
 
 static void test_cli_add(void)
@@ -845,16 +802,7 @@ static void test_cli_run(void)
     g_assert_no_error(error);
     g_string_truncate(output, 0);
 
-    // Invalid arguments leave both tasks queued.
-    status = cli_execute_line(manager, "run 1", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-    g_clear_error(&error);
-    g_assert_cmpstr(output->str, ==, "");
-
-    TaskManagerStats stats = task_manager_get_stats(manager);
-    g_assert_cmpuint(stats.tasks, ==, 2);
-    g_assert_cmpuint(stats.queue_length, ==, 2);
+    TaskManagerStats stats;
 
     // FIFO runs the first enqueued task even though it has lower priority.
     status = cli_execute_line(manager, "run", output, &error);
@@ -886,15 +834,34 @@ static void test_cli_run(void)
     g_assert_cmpuint(stats.tasks, ==, 0);
     g_assert_cmpuint(stats.queue_length, ==, 0);
 
-    g_string_truncate(output, 0);
-
-    status = cli_execute_line(manager, "run", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_no_error(error);
-    g_assert_cmpstr(output->str, ==, "queue is empty\n");
-
     g_string_free(output, TRUE);
     task_manager_free(manager);
+}
+
+static void test_cli_run_invalid(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
+    const guint id = task_manager_add_task(manager, "first", 3, &error);
+    g_assert_no_error(error);
+    g_assert_true(task_manager_enqueue_task(manager, id, &error));
+    g_assert_no_error(error);
+    g_assert_cmpint(cli_execute_line(manager, "run 1", output, &error), ==, CLI_CONTINUE);
+    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
+    g_assert_cmpstr(output->str, ==, "");
+    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 1);
+    g_assert_cmpuint(task_manager_get_stats(manager).queue_length, ==, 1);
+}
+
+static void test_cli_run_empty(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
+    g_assert_cmpint(cli_execute_line(manager, "run", output, &error), ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_assert_cmpstr(output->str, ==, "queue is empty\n");
 }
 
 static void test_cli_history(void)
@@ -1088,7 +1055,11 @@ static void test_cli_tag_lifecycle(void)
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
-    g_test_add_func("/cli/basic", test_cli_base);
+    g_test_add_data_func("/cli/basic/empty", "", test_cli_basic);
+    g_test_add_data_func("/cli/basic/spaces", "    ", test_cli_basic);
+    g_test_add_data_func("/cli/basic/quit", "quit", test_cli_basic);
+    g_test_add_data_func("/cli/basic/unknown", "unknown", test_cli_basic);
+    
     g_test_add_func("/cli/numeric-tokens", test_cli_numeric_tokens);
     g_test_add_func("/cli/tag-lifecycle", test_cli_tag_lifecycle);
 
@@ -1116,6 +1087,8 @@ int main(int argc, char **argv)
     g_test_add_func("/cli/top-invalid", test_cli_top_invalid);
 
     g_test_add_func("/cli/run", test_cli_run);
+    g_test_add_func("/cli/run/invalid", test_cli_run_invalid);
+    g_test_add_func("/cli/run/empty", test_cli_run_empty);
 
     g_test_add_func("/cli/history", test_cli_history);
     g_test_add_func("/cli/history-limit", test_cli_history_limit);
