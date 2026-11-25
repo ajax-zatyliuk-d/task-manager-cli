@@ -179,6 +179,17 @@ static void test_task_remove_missing_tag(void)
     g_assert_false(removed);
 }
 
+static void test_task_new_with_null_tags(void)
+{
+    g_autoptr(GError) error = NULL;
+
+    g_autoptr(Task) task = task_new_with_tags(1, "no tags", 5, NULL, &error);
+
+    g_assert_no_error(error);
+    g_assert_nonnull(task);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
+}
+
 static void test_task_new_with_tags(void)
 {
     g_autoptr(GError) error = NULL;
@@ -281,6 +292,7 @@ int main(int argc, char **argv)
     g_test_init(&argc, &argv, NULL);
     g_test_add_func("/task/new", test_task_new);
     g_test_add_func("/task/new-with-tags", test_task_new_with_tags);
+    g_test_add_func("/task/new-with-tags/null", test_task_new_with_null_tags);
     g_test_add_func("/task/new-with-tags/invalid-tag", test_task_new_with_invalid_tag);
     g_test_add_func("/task/new-with-tags/duplicate-tag", test_task_new_with_duplicate_tag);
     g_test_add_func("/task/new-with-tags/duplicate-distinct-strings", test_task_new_with_duplicate_tag_in_distinct_strings);
