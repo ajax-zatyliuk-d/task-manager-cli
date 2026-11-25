@@ -168,17 +168,14 @@ static void test_add_with_tags_atomic(gconstpointer data)
     g_assert_error(error, TASK_ERROR, expected_error);
     g_clear_error(&error);
     g_assert_cmpuint(task_manager_add_task_with_tags(manager, "invalid", 9, tags, NULL), ==, 0);
-    g_clear_error(&error);
 
     const TaskManagerStats stats = task_manager_get_stats(manager);
     g_assert_cmpuint(stats.tasks, ==, 1);
     g_assert_cmpuint(stats.unique_tags, ==, 1);
     g_assert_cmpuint(stats.queue_length, ==, 1);
     g_autoptr(GPtrArray) missing = task_manager_find_tasks_by_tag(manager, "new");
-    g_assert_no_error(error);
     g_assert_cmpuint(missing->len, ==, 0);
     g_autoptr(GPtrArray) existing = task_manager_find_tasks_by_tag(manager, "existing");
-    g_assert_no_error(error);
     g_assert_cmpuint(existing->len, ==, 1);
     g_assert_cmpuint(task_get_id(g_ptr_array_index(existing, 0)), ==, first);
     g_autoptr(GPtrArray) top = task_manager_top_tasks(manager, 10);
@@ -201,11 +198,9 @@ static void test_add_with_tags_success(void)
     g_assert_no_error(error);
     g_assert_cmpuint(id, ==, 1);
     g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "new");
-    g_assert_no_error(error);
     g_assert_cmpuint(matches->len, ==, 1);
     g_assert_cmpuint(task_get_id(g_ptr_array_index(matches, 0)), ==, id);
     g_autoptr(GPtrArray) other_matches = task_manager_find_tasks_by_tag(manager, "another");
-    g_assert_no_error(error);
     g_assert_cmpuint(other_matches->len, ==, 1);
     g_assert_cmpuint(task_get_id(g_ptr_array_index(other_matches, 0)), ==, id);
 }
@@ -247,13 +242,11 @@ static void test_remove_removes_task_from_indexes(void)
     g_assert_true(result);
 
     GPtrArray *unique_tag = task_manager_find_tasks_by_tag(manager, second_tag);
-    g_assert_no_error(error);
     g_assert_nonnull(unique_tag);
     g_assert_cmpint(unique_tag->len, ==, 0);
     g_ptr_array_unref(unique_tag);
 
     GPtrArray *default_tag = task_manager_find_tasks_by_tag(manager, tag);
-    g_assert_no_error(error);
     g_assert_cmpint(default_tag->len, ==, 1);
     g_assert_true(g_ptr_array_index(default_tag, 0) == task2);
     g_ptr_array_unref(default_tag);
@@ -335,7 +328,6 @@ static void test_remove_removes_all_queue_entries(void)
     g_assert_cmpuint(task_manager_get_stats(manager).queue_length, ==, 1);
 
     next_task = task_manager_extract_next_task(manager);
-    g_assert_no_error(error);
     g_assert_nonnull(next_task);
     g_assert_cmpuint(task_get_id(next_task), ==, second_task_id);
     g_assert_cmpuint(task_manager_get_stats(manager).queue_length, ==, 0);
@@ -409,7 +401,6 @@ static void test_tag_duplicate_leaves_task_unchanged(void)
     g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
     g_clear_error(&error);
     g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work");
-    g_assert_no_error(error);
     g_assert_cmpuint(matches->len, ==, 2);
     const Task *task = task_manager_find_task_by_id(manager, id, &error);
     g_assert_no_error(error);
@@ -543,7 +534,6 @@ static void test_find_by_tag(void)
     g_assert_no_error(error);
 
     GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, tag);
-    g_assert_no_error(error);
     g_assert_nonnull(tasks);
     g_assert_cmpint(tasks->len, ==, 2);
     g_assert_true(g_ptr_array_find(tasks, task1, NULL));
@@ -551,14 +541,12 @@ static void test_find_by_tag(void)
     g_ptr_array_unref(tasks);
 
     GPtrArray *other_tasks = task_manager_find_tasks_by_tag(manager, tag_other);
-    g_assert_no_error(error);
     g_assert_nonnull(other_tasks);
     g_assert_cmpint(other_tasks->len, ==, 1);
     g_assert_true(g_ptr_array_index(other_tasks, 0) == task2);
     g_ptr_array_unref(other_tasks);
 
     GPtrArray *no_tasks = task_manager_find_tasks_by_tag(manager, unused_tag);
-    g_assert_no_error(error);
     g_assert_nonnull(no_tasks);
     g_assert_cmpuint(no_tasks->len, ==, 0);
     g_ptr_array_unref(no_tasks);
@@ -577,13 +565,11 @@ static void test_find_by_tag_returns_independent_array(void)
     g_assert_no_error(error);
 
     g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work");
-    g_assert_no_error(error);
     g_assert_nonnull(matches);
     g_assert_cmpuint(matches->len, ==, 1);
     g_ptr_array_set_size(matches, 0);
 
     g_autoptr(GPtrArray) found_again = task_manager_find_tasks_by_tag(manager, "work");
-    g_assert_no_error(error);
     g_assert_nonnull(found_again);
     g_assert_cmpuint(found_again->len, ==, 1);
     g_assert_cmpuint(task_get_id(g_ptr_array_index(found_again, 0)), ==, id);
@@ -624,7 +610,6 @@ static void test_untag_shared_tag(void)
     g_assert_true(task_manager_untag_task(manager, first, "work", &error));
     g_assert_no_error(error);
     g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work");
-    g_assert_no_error(error);
     g_assert_cmpuint(matches->len, ==, 1);
     g_assert_cmpuint(task_get_id(g_ptr_array_index(matches, 0)), ==, second);
     g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 1);
@@ -642,7 +627,6 @@ static void test_untag_last_occurrence(void)
     g_assert_true(task_manager_untag_task(manager, id, "work", &error));
     g_assert_no_error(error);
     g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work");
-    g_assert_no_error(error);
     g_assert_cmpuint(matches->len, ==, 0);
     g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 0);
 }
@@ -673,7 +657,6 @@ static void test_retag_after_untag(void)
     g_assert_true(task_manager_tag_task(manager, id, "work", &error));
     g_assert_no_error(error);
     g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work");
-    g_assert_no_error(error);
     g_assert_cmpuint(matches->len, ==, 1);
     g_assert_cmpuint(task_get_id(g_ptr_array_index(matches, 0)), ==, id);
 }
@@ -701,7 +684,6 @@ static void test_untag_borrowed_tag(void)
     g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 1);
 
     g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work");
-    g_assert_no_error(error);
     g_assert_cmpuint(matches->len, ==, 1);
     g_assert_cmpuint(task_get_id(g_ptr_array_index(matches, 0)), ==, second_id);
 
@@ -713,7 +695,6 @@ static void test_untag_borrowed_tag(void)
     g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 0);
 
     g_autoptr(GPtrArray) empty = task_manager_find_tasks_by_tag(manager, "work");
-    g_assert_no_error(error);
     g_assert_cmpuint(empty->len, ==, 0);
 }
 
@@ -857,7 +838,6 @@ static void test_run_removes_indexes(void)
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_clear_error(&error);
     g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "work");
-    g_assert_no_error(error);
     g_assert_cmpuint(matches->len, ==, 0);
     g_autoptr(GPtrArray) top = task_manager_top_tasks(manager, 10);
     g_assert_cmpuint(top->len, ==, 0);
@@ -915,7 +895,6 @@ static void test_run_removes_duplicate_queue_entries(void)
 
     // Queue: first, second, first. Running first also removes its second entry.
     next_task = task_manager_extract_next_task(manager);
-    g_assert_no_error(error);
     g_assert_nonnull(next_task);
     g_assert_cmpuint(task_get_id(next_task), ==, first_task_id);
 
@@ -934,7 +913,6 @@ static void test_run_removes_duplicate_queue_entries(void)
 
     // second is next; the queue becomes empty after it runs.
     next_task = task_manager_extract_next_task(manager);
-    g_assert_no_error(error);
     g_assert_nonnull(next_task);
     g_assert_cmpuint(task_get_id(next_task), ==, second_task_id);
 
@@ -951,7 +929,6 @@ static void test_run_removes_duplicate_queue_entries(void)
     task_free(next_task);
 
     next_task = task_manager_extract_next_task(manager);
-    g_assert_no_error(error);
     g_assert_null(next_task);
 
     const Task *missing_task1_again = task_manager_find_task_by_id(manager, first_task_id, &error);
