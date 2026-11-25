@@ -112,50 +112,47 @@ static void test_cli_add(gconstpointer data)
     }
 }
 
-static void test_cli_add_syntax_errors(void)
+static void test_cli_add_syntax_errors(gconstpointer data)
 {
+    const gchar *command = data;
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GString) output = g_string_new(NULL);
-    const gchar *commands[] = {"add", "add 5", "add x title", "add 5 title #ok word", "add 5 #tag"};
+    g_autoptr(GError) error = NULL;
 
-    for (gsize i = 0; i < G_N_ELEMENTS(commands); ++i) {
-        g_test_message("%s", commands[i]);
-        g_autoptr(GError) error = NULL;
-        const CliStatus status = cli_execute_line(manager, commands[i], output, &error);
-        g_assert_cmpuint(status, ==, CLI_CONTINUE);
-        g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-        g_assert_cmpstr(output->str, ==, "");
-        g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 0);
-    }
+    const CliStatus status = cli_execute_line(manager, command, output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
+    g_assert_cmpstr(output->str, ==, "");
+    g_assert_cmpuint(task_manager_get_stats(manager).tasks, ==, 0);
 }
 
-static void test_cli_add_domain_errors(void)
+typedef struct
 {
+    const gchar *command;
+    TaskError code;
+} AddErrorCase;
+
+static const AddErrorCase add_error_cases[] = {
+    {"add 11 title", TASK_ERROR_INVALID_PRIORITY},
+    {"add 5 title #ok #Bad", TASK_ERROR_INVALID_TAG},
+    {"add 5 b #y #y", TASK_ERROR_DUPLICATE_TAG},
+};
+
+static void test_cli_add_domain_errors(gconstpointer data)
+{
+    const AddErrorCase *test_case = data;
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GString) output = g_string_new(NULL);
-    const struct
-    {
-        const gchar *command;
-        TaskError code;
-    } cases[] = {
-        {"add 11 title", TASK_ERROR_INVALID_PRIORITY},
-        {"add 5 title #ok #Bad", TASK_ERROR_INVALID_TAG},
-        {"add 5 b #y #y", TASK_ERROR_DUPLICATE_TAG},
-    };
-
-    for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {
-        g_test_message("%s", cases[i].command);
-        g_autoptr(GError) error = NULL;
-        const CliStatus status = cli_execute_line(manager, cases[i].command, output, &error);
-        g_assert_cmpuint(status, ==, CLI_CONTINUE);
-        g_assert_error(error, TASK_ERROR, cases[i].code);
-        g_assert_cmpstr(output->str, ==, "");
-        const TaskManagerStats stats = task_manager_get_stats(manager);
-        g_assert_cmpuint(stats.tasks, ==, 0);
-        g_assert_cmpuint(stats.unique_tags, ==, 0);
-    }
-
     g_autoptr(GError) error = NULL;
+    const CliStatus status = cli_execute_line(manager, test_case->command, output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_error(error, TASK_ERROR, test_case->code);
+    g_assert_cmpstr(output->str, ==, "");
+    const TaskManagerStats stats = task_manager_get_stats(manager);
+    g_assert_cmpuint(stats.tasks, ==, 0);
+    g_assert_cmpuint(stats.unique_tags, ==, 0);
+    g_clear_error(&error);
+
     g_assert_cmpuint(cli_execute_line(manager, "add 5 b #y", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "added task 1\n");
@@ -1040,8 +1037,14 @@ int main(int argc, char **argv)
     g_test_add_data_func("/cli/add/multiword-title", &add_cases[0], test_cli_add);
     g_test_add_data_func("/cli/add/multiple-tags", &add_cases[1], test_cli_add);
     g_test_add_data_func("/cli/add/extra-spaces", &add_cases[2], test_cli_add);
-    g_test_add_func("/cli/add/syntax-errors", test_cli_add_syntax_errors);
-    g_test_add_func("/cli/add/domain-errors", test_cli_add_domain_errors);
+    g_test_add_data_func("/cli/add/syntax/missing-arguments", "add", test_cli_add_syntax_errors);
+    g_test_add_data_func("/cli/add/syntax/missing-title", "add 5", test_cli_add_syntax_errors);
+    g_test_add_data_func("/cli/add/syntax/invalid-priority", "add x title", test_cli_add_syntax_errors);
+    g_test_add_data_func("/cli/add/syntax/word-after-tag", "add 5 title #ok word", test_cli_add_syntax_errors);
+    g_test_add_data_func("/cli/add/syntax/tag-without-title", "add 5 #tag", test_cli_add_syntax_errors);
+    g_test_add_data_func("/cli/add/domain/invalid-priority", &add_error_cases[0], test_cli_add_domain_errors);
+    g_test_add_data_func("/cli/add/domain/invalid-tag", &add_error_cases[1], test_cli_add_domain_errors);
+    g_test_add_data_func("/cli/add/domain/duplicate-tag", &add_error_cases[2], test_cli_add_domain_errors);
     g_test_add_func("/cli/add/id-exhausted", test_cli_add_id_exhausted);
 
     g_test_add_func("/cli/del/success", test_cli_del);
