@@ -74,7 +74,7 @@ static void index_task(TaskManager *manager, Task *task)
     g_sequence_insert_sorted(manager->tasks_sorted, task, compare_tasks, NULL);
 
     for (guint i = 0; i < task_get_tag_count(task); ++i) {
-        const gchar *tag = task_get_tag(task, i);
+        const gchar *tag = task_get_tag_at(task, i);
         index_task_tag(manager, task, tag);
     }
 }
@@ -83,7 +83,7 @@ static void unindex_task(TaskManager *manager, Task *task)
 {
     const guint tag_count = task_get_tag_count(task);
     for (guint i = 0; i < tag_count; ++i) {
-        unindex_task_tag(manager, task, task_get_tag(task, i));
+        unindex_task_tag(manager, task, task_get_tag_at(task, i));
     }
 
     GSequenceIter *it = g_sequence_lookup(manager->tasks_sorted, task, compare_tasks, NULL);

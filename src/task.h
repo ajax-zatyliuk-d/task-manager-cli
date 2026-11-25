@@ -109,22 +109,22 @@ gboolean task_set_priority(Task *task, gint priority, GError **error);
 gboolean task_validate_tag(const gchar *tag, GError **error);
 
 /**
- * task_get_tag:
- * @task: a task
- * @index: zero-based tag index
- *
- * Returns: (transfer none) (nullable): a task-owned tag, valid until it is
- *   removed or the task is freed; %NULL if @index is out of range
- */
-const gchar *task_get_tag(const Task *task, guint index);
-
-/**
  * task_get_tag_count:
  * @task: a task
  *
  * Returns: the number of tags
  */
 guint task_get_tag_count(const Task *task);
+
+/**
+ * task_get_tag_at:
+ * @task: a task
+ * @index: zero-based tag index
+ *
+ * Returns: (transfer none) (nullable): a task-owned tag, valid until it is
+ *   removed or the task is freed; %NULL if @index is out of range
+ */
+const gchar *task_get_tag_at(const Task *task, guint index);
 
 /**
  * task_add_tag:

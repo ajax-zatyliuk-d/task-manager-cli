@@ -396,7 +396,7 @@ static void test_tag_adds_tag(void)
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
-    g_assert_cmpstr(task_get_tag(task, 0), ==, "work");
+    g_assert_cmpstr(task_get_tag_at(task, 0), ==, "work");
 }
 
 static void test_tag_duplicate_leaves_task_unchanged(void)
@@ -709,7 +709,7 @@ static void test_untag_borrowed_tag(void)
 
     const Task *first = task_manager_find_task_by_id(manager, first_id, &error);
     g_assert_no_error(error);
-    const gchar *borrowed_tag = task_get_tag(first, 0);
+    const gchar *borrowed_tag = task_get_tag_at(first, 0);
     g_assert_true(task_manager_untag_task(manager, first_id, borrowed_tag, &error));
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_tag_count(first), ==, 0);
@@ -722,7 +722,7 @@ static void test_untag_borrowed_tag(void)
 
     const Task *second = task_manager_find_task_by_id(manager, second_id, &error);
     g_assert_no_error(error);
-    borrowed_tag = task_get_tag(second, 0);
+    borrowed_tag = task_get_tag_at(second, 0);
     g_assert_true(task_manager_untag_task(manager, second_id, borrowed_tag, &error));
     g_assert_no_error(error);
     g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 0);

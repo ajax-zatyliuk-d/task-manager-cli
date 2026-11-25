@@ -42,8 +42,8 @@ static void test_task_new_with_tags(void)
     g_assert_cmpuint(task_get_tag_count(task), ==, 2);
     ((gchar *)g_ptr_array_index(tags, 0))[0] = 'X';
     g_ptr_array_set_size(tags, 0);
-    g_assert_cmpstr(task_get_tag(task, 0), ==, "work");
-    g_assert_cmpstr(task_get_tag(task, 1), ==, "home_1");
+    g_assert_cmpstr(task_get_tag_at(task, 0), ==, "work");
+    g_assert_cmpstr(task_get_tag_at(task, 1), ==, "home_1");
 }
 
 static void test_task_new_with_null_tags(void)
@@ -236,7 +236,7 @@ static void test_task_add_duplicate_tag(void)
 
     g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
-    g_assert_cmpstr(task_get_tag(task, 0), ==, "work_1");
+    g_assert_cmpstr(task_get_tag_at(task, 0), ==, "work_1");
 }
 
 static void test_task_remove_tag(void)

@@ -132,7 +132,9 @@ gboolean task_validate_tag(const gchar *tag, GError **error)
     return TRUE;
 }
 
-const gchar *task_get_tag(const Task *task, guint index)
+guint task_get_tag_count(const Task *task) { return task->tags->len; }
+
+const gchar *task_get_tag_at(const Task *task, guint index)
 {
     if (index >= task->tags->len) {
         return NULL;
@@ -140,8 +142,6 @@ const gchar *task_get_tag(const Task *task, guint index)
 
     return g_ptr_array_index(task->tags, index);
 }
-
-guint task_get_tag_count(const Task *task) { return task->tags->len; }
 
 gboolean task_add_tag(Task *task, const gchar *tag, GError **error)
 {

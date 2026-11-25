@@ -105,10 +105,10 @@ static void test_cli_add(gconstpointer data)
     g_assert_cmpint(task_get_priority(task), ==, 5);
     g_assert_cmpuint(task_get_tag_count(task), ==, test_case->expected_tag_count);
     if (test_case->first_tag != NULL) {
-        g_assert_cmpstr(task_get_tag(task, 0), ==, test_case->first_tag);
+        g_assert_cmpstr(task_get_tag_at(task, 0), ==, test_case->first_tag);
     }
     if (test_case->second_tag != NULL) {
-        g_assert_cmpstr(task_get_tag(task, 1), ==, test_case->second_tag);
+        g_assert_cmpstr(task_get_tag_at(task, 1), ==, test_case->second_tag);
     }
 }
 
@@ -305,7 +305,7 @@ static void test_cli_tag(void)
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
-    g_assert_cmpstr(task_get_tag(task, 0), ==, "work");
+    g_assert_cmpstr(task_get_tag_at(task, 0), ==, "work");
 
     GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work", &error);
     g_assert_no_error(error);
@@ -333,7 +333,7 @@ static void test_cli_tag(void)
     const Task *tagged_task = g_ptr_array_index(matches_after_duplicate, 0);
     g_assert_cmpuint(task_get_id(tagged_task), ==, 1);
     g_assert_cmpuint(task_get_tag_count(tagged_task), ==, 1);
-    g_assert_cmpstr(task_get_tag(tagged_task, 0), ==, "work");
+    g_assert_cmpstr(task_get_tag_at(tagged_task, 0), ==, "work");
     g_ptr_array_unref(matches_after_duplicate);
 
     g_string_free(output, TRUE);
@@ -432,7 +432,7 @@ static void test_cli_untag(void)
     g_assert_no_error(error);
     g_assert_nonnull(task2);
     g_assert_cmpuint(task_get_tag_count(task2), ==, 1);
-    g_assert_cmpstr(task_get_tag(task2, 0), ==, "work");
+    g_assert_cmpstr(task_get_tag_at(task2, 0), ==, "work");
 
     GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work", &error);
     g_assert_no_error(error);
@@ -511,7 +511,7 @@ static void test_cli_untag_invalid(void)
         g_assert_no_error(error);
         g_assert_nonnull(task);
         g_assert_cmpuint(task_get_tag_count(task), ==, 1);
-        g_assert_cmpstr(task_get_tag(task, 0), ==, "work");
+        g_assert_cmpstr(task_get_tag_at(task, 0), ==, "work");
 
         GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work", &error);
         g_assert_no_error(error);
@@ -789,7 +789,7 @@ static void test_cli_find_invalid(void)
         g_assert_cmpstr(task_get_title(task), ==, "title");
         g_assert_cmpint(task_get_priority(task), ==, 5);
         g_assert_cmpuint(task_get_tag_count(task), ==, 1);
-        g_assert_cmpstr(task_get_tag(task, 0), ==, "work");
+        g_assert_cmpstr(task_get_tag_at(task, 0), ==, "work");
 
         GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, "work", &error);
         g_assert_no_error(error);
