@@ -376,21 +376,24 @@ static void test_find_by_tag(void)
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
-    // first task
     guint task1_id = task_manager_add_task(manager, title1, priority1, &error);
     g_assert_no_error(error);
+    g_assert_cmpuint(task1_id, !=, 0);
     const Task *task1 = task_manager_find_task_by_id(manager, task1_id, &error);
     g_assert_no_error(error);
-    task_manager_tag_task(manager, task1_id, tag, &error);
+    g_assert_nonnull(task1);
+    g_assert_true(task_manager_tag_task(manager, task1_id, tag, &error));
     g_assert_no_error(error);
 
-    // second task
     guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
     g_assert_no_error(error);
+    g_assert_cmpuint(task2_id, !=, 0);
     const Task *task2 = task_manager_find_task_by_id(manager, task2_id, &error);
     g_assert_no_error(error);
-    task_manager_tag_task(manager, task2_id, tag, &error);
-    task_manager_tag_task(manager, task2_id, tag_other, &error);
+    g_assert_nonnull(task2);
+    g_assert_true(task_manager_tag_task(manager, task2_id, tag, &error));
+    g_assert_no_error(error);
+    g_assert_true(task_manager_tag_task(manager, task2_id, tag_other, &error));
     g_assert_no_error(error);
 
     GPtrArray *tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
@@ -633,18 +636,24 @@ static void test_delete_by_valid_id(void)
     TaskManager *manager = task_manager_new();
     g_assert_nonnull(manager);
 
-    // first task
     guint task1_id = task_manager_add_task(manager, title1, priority1, &error);
-    task_manager_tag_task(manager, task1_id, tag, &error);
-    task_manager_tag_task(manager, task1_id, second_tag, &error);
-
-    // second task
-    guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
-    const Task *task2 = task_manager_find_task_by_id(manager, task2_id, &error);
-    task_manager_tag_task(manager, task2_id, tag, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(task1_id, !=, 0);
+    g_assert_true(task_manager_tag_task(manager, task1_id, tag, &error));
+    g_assert_no_error(error);
+    g_assert_true(task_manager_tag_task(manager, task1_id, second_tag, &error));
     g_assert_no_error(error);
 
-    // delete task with 2 tags
+    guint task2_id = task_manager_add_task(manager, title2, priority2, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(task2_id, !=, 0);
+    const Task *task2 = task_manager_find_task_by_id(manager, task2_id, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(task2);
+    g_assert_true(task_manager_tag_task(manager, task2_id, tag, &error));
+    g_assert_no_error(error);
+
+    // The shared tag remains indexed for task2; the other tag disappears.
     result = task_manager_remove_task(manager, task1_id, &error);
     g_assert_no_error(error);
     g_assert_true(result);
@@ -741,8 +750,12 @@ static void test_top_limit(gconstpointer data)
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GError) error = NULL;
     const guint low = task_manager_add_task(manager, "low", 2, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(low, !=, 0);
     const guint high = task_manager_add_task(manager, "high", 7, &error);
     g_assert_no_error(error);
+    g_assert_cmpuint(high, !=, 0);
+
     g_autoptr(GPtrArray) tasks = task_manager_top_tasks(manager, limit);
     g_assert_cmpuint(tasks->len, ==, MIN(limit, 2));
     if (tasks->len > 0) {
