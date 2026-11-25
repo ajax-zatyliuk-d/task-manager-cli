@@ -784,15 +784,24 @@ static void test_cli_find_invalid(gconstpointer data)
     g_assert_true(g_ptr_array_index(tasks, 0) == task);
     g_ptr_array_unref(tasks);
 
-    const gchar *unmatched[] = {"find #Bad", "find #"};
-    for (gsize i = 0; i < G_N_ELEMENTS(unmatched); ++i) {
-        g_assert_cmpint(cli_execute_line(manager, unmatched[i], output, &error), ==, CLI_CONTINUE);
-        g_assert_no_error(error);
-        g_assert_cmpstr(output->str, ==, "");
-    }
-
     g_string_free(output, TRUE);
     task_manager_free(manager);
+}
+
+static void test_cli_find_unmatched_invalid_format(gconstpointer data)
+{
+    const gchar *command = data;
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
+    const guint id = task_manager_add_task(manager, "title", 5, &error);
+    g_assert_no_error(error);
+    g_assert_true(task_manager_tag_task(manager, id, "work", &error));
+    g_assert_no_error(error);
+
+    g_assert_cmpint(cli_execute_line(manager, command, output, &error), ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_assert_cmpstr(output->str, ==, "");
 }
 
 static void test_cli_top(void)
@@ -1095,6 +1104,8 @@ int main(int argc, char **argv)
     g_test_add_data_func("/cli/find/invalid/missing-tag", GUINT_TO_POINTER(0), test_cli_find_invalid);
     g_test_add_data_func("/cli/find/invalid/extra-argument", GUINT_TO_POINTER(1), test_cli_find_invalid);
     g_test_add_data_func("/cli/find/invalid/missing-hash", GUINT_TO_POINTER(2), test_cli_find_invalid);
+    g_test_add_data_func("/cli/find/unmatched/uppercase-tag", "find #Bad", test_cli_find_unmatched_invalid_format);
+    g_test_add_data_func("/cli/find/unmatched/empty-tag", "find #", test_cli_find_unmatched_invalid_format);
 
     g_test_add_func("/cli/top/success", test_cli_top);
     g_test_add_data_func("/cli/top/invalid/missing-limit", GUINT_TO_POINTER(0), test_cli_top_invalid);
