@@ -443,58 +443,38 @@ static void test_tag_shared_by_two_tasks(void)
     g_assert_cmpuint(stats.queue_length, ==, 0);
 }
 
-static void test_invalid_tag(void)
+static void test_invalid_tag(gconstpointer data)
 {
-    GError *error = NULL;
-
-    const gchar *title = "cmd";
-    gint priority = 1;
-
-    const gchar *tag = "tag";
-    const gchar *empty = "";
-    const gchar *camel_case = "Tag";
-    const gchar *space = "t a g";
-
-    gboolean result = TRUE;
-
-    TaskManager *manager = task_manager_new();
-    g_assert_nonnull(manager);
-
-    guint task_id = task_manager_add_task(manager, title, priority, &error);
+    const gchar *tag = data;
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    const guint id = task_manager_add_task(manager, "task", 5, &error);
+    g_assert_no_error(error);
+    g_assert_true(task_manager_tag_task(manager, id, "existing", &error));
     g_assert_no_error(error);
 
-    const Task *task = task_manager_find_task_by_id(manager, task_id, &error);
+    g_assert_false(task_manager_tag_task(manager, id, tag, &error));
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
+    g_clear_error(&error);
+    g_assert_false(task_manager_tag_task(manager, id, tag, NULL));
+
+    const Task *task = task_manager_find_task_by_id(manager, id, &error);
     g_assert_no_error(error);
+    g_assert_nonnull(task);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 1);
+    g_assert_cmpstr(task_get_tag_at(task, 0), ==, "existing");
+    g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "existing");
+    g_assert_cmpuint(matches->len, ==, 1);
+    g_assert_true(g_ptr_array_index(matches, 0) == task);
+}
 
-    result = task_manager_tag_task(manager, task_id, empty, &error);
-    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
-    g_clear_error(&error);
-    g_assert_false(result);
-    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
+static void test_tag_unknown_id(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
 
-    result = task_manager_tag_task(manager, task_id, camel_case, &error);
-    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
-    g_clear_error(&error);
-    g_assert_false(result);
-    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
-
-    result = task_manager_tag_task(manager, task_id, space, &error);
-    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
-    g_clear_error(&error);
-    g_assert_false(result);
-    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
-
-    result = task_manager_tag_task(manager, 999, tag, &error);
+    g_assert_false(task_manager_tag_task(manager, 999, "tag", &error));
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
-    g_clear_error(&error);
-    g_assert_false(result);
-    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
-
-    result = task_manager_tag_task(manager, task_id, space, NULL);
-    g_assert_false(result);
-    g_assert_cmpuint(task_get_tag_count(task), ==, 0);
-
-    task_manager_free(manager);
 }
 
 static void test_find_by_tag(void)
@@ -698,49 +678,38 @@ static void test_untag_borrowed_tag(void)
     g_assert_cmpuint(empty->len, ==, 0);
 }
 
-static void test_invalid_untag(void)
+static void test_invalid_untag(gconstpointer data)
 {
-    GError *error = NULL;
-
-    const gchar *title = "cmd";
-    gint priority = 1;
-
-    const gchar *tag = "tag";
-    const gchar *empty = "";
-    const gchar *camel_case = "Tag";
-    const gchar *space = "t a g";
-
-    gboolean result = TRUE;
-
-    TaskManager *manager = task_manager_new();
-    guint task_id = task_manager_add_task(manager, title, priority, &error);
+    const gchar *tag = data;
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    const guint id = task_manager_add_task(manager, "task", 5, &error);
     g_assert_no_error(error);
-    g_assert_true(task_id != 0);
+    g_assert_true(task_manager_tag_task(manager, id, "existing", &error));
+    g_assert_no_error(error);
 
-    result = task_manager_untag_task(manager, task_id, empty, &error);
+    g_assert_false(task_manager_untag_task(manager, id, tag, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
-    g_assert_false(result);
+    g_assert_false(task_manager_untag_task(manager, id, tag, NULL));
 
-    result = task_manager_untag_task(manager, task_id, camel_case, &error);
-    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
-    g_clear_error(&error);
-    g_assert_false(result);
+    const Task *task = task_manager_find_task_by_id(manager, id, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(task);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 1);
+    g_assert_cmpstr(task_get_tag_at(task, 0), ==, "existing");
+    g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "existing");
+    g_assert_cmpuint(matches->len, ==, 1);
+    g_assert_true(g_ptr_array_index(matches, 0) == task);
+}
 
-    result = task_manager_untag_task(manager, task_id, space, &error);
-    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
-    g_clear_error(&error);
-    g_assert_false(result);
+static void test_untag_unknown_id(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
 
-    result = task_manager_untag_task(manager, 999, tag, &error);
+    g_assert_false(task_manager_untag_task(manager, 999, "tag", &error));
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
-    g_clear_error(&error);
-    g_assert_false(result);
-
-    result = task_manager_untag_task(manager, task_id, space, NULL);
-    g_assert_false(result);
-
-    task_manager_free(manager);
 }
 
 static void test_top_order(void)
@@ -1073,7 +1042,10 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/tag/add", test_tag_adds_tag);
     g_test_add_func("/task-manager/tag/duplicate", test_tag_duplicate_leaves_task_unchanged);
     g_test_add_func("/task-manager/tag/shared", test_tag_shared_by_two_tasks);
-    g_test_add_func("/task-manager/tag/invalid", test_invalid_tag);
+    g_test_add_data_func("/task-manager/tag/invalid/empty", "", test_invalid_tag);
+    g_test_add_data_func("/task-manager/tag/invalid/uppercase", "Tag", test_invalid_tag);
+    g_test_add_data_func("/task-manager/tag/invalid/space", "t a g", test_invalid_tag);
+    g_test_add_func("/task-manager/tag/unknown-id", test_tag_unknown_id);
     g_test_add_func("/task-manager/tag/find-valid", test_find_by_tag);
     g_test_add_func("/task-manager/tag/find-independent-array", test_find_by_tag_returns_independent_array);
     g_test_add_func("/task-manager/tag/find-invalid", test_find_by_invalid_tag);
@@ -1083,7 +1055,10 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/untag/missing", test_untag_missing_tag);
     g_test_add_func("/task-manager/untag/retag", test_retag_after_untag);
     g_test_add_func("/task-manager/untag/borrowed-tag", test_untag_borrowed_tag);
-    g_test_add_func("/task-manager/untag/invalid", test_invalid_untag);
+    g_test_add_data_func("/task-manager/untag/invalid/empty", "", test_invalid_untag);
+    g_test_add_data_func("/task-manager/untag/invalid/uppercase", "Tag", test_invalid_untag);
+    g_test_add_data_func("/task-manager/untag/invalid/space", "t a g", test_invalid_untag);
+    g_test_add_func("/task-manager/untag/unknown-id", test_untag_unknown_id);
 
     g_test_add_func("/task-manager/top/order", test_top_order);
     g_test_add_func("/task-manager/top/equal-priority", test_top_equal_priority);
