@@ -31,36 +31,6 @@ static Task *lookup_task_or_error(GHashTable *tasks_by_id, guint id, GError **er
     return task;
 }
 
-static void propagate_task_error(GError **error, GError *task_error)
-{
-    gint code;
-    switch (task_error->code) {
-        case TASK_ERROR_INVALID_PRIORITY:
-            code = TM_ERROR_INVALID_PRIORITY;
-            break;
-        case TASK_ERROR_INVALID_TAG:
-            code = TM_ERROR_INVALID_TAG;
-            break;
-        case TASK_ERROR_DUPLICATE_TAG:
-            code = TM_ERROR_DUPLICATE_TAG;
-            break;
-        default:
-            g_assert_not_reached();
-    }
-    g_set_error_literal(error, TM_ERROR, code, task_error->message);
-    g_error_free(task_error);
-}
-
-static gboolean validate_tag(const gchar *tag, GError **error)
-{
-    GError *task_error = NULL;
-    if (!task_validate_tag(tag, &task_error)) {
-        propagate_task_error(error, task_error);
-        return FALSE;
-    }
-    return TRUE;
-}
-
 static void index_task_tag(TaskManager *manager, Task *task, const gchar *tag)
 {
     GPtrArray *tag_tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
@@ -168,10 +138,8 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
         return 0;
     }
 
-    GError *task_error = NULL;
-    Task *task = task_new_with_tags(id, title, priority, tags, &task_error);
+    Task *task = task_new_with_tags(id, title, priority, tags, error);
     if (task == NULL) {
-        propagate_task_error(error, task_error);
         return 0;
     }
     g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(id), task);
@@ -202,9 +170,7 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
     if (task == NULL) {
         return FALSE;
     }
-    GError *task_error = NULL;
-    if (!task_add_tag(task, tag, &task_error)) {
-        propagate_task_error(error, task_error);
+    if (!task_add_tag(task, tag, error)) {
         return FALSE;
     }
     index_task_tag(manager, task, tag);
@@ -220,9 +186,7 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
     }
     g_autofree gchar *tag_copy = g_strdup(tag);
     gboolean removed = FALSE;
-    GError *task_error = NULL;
-    if (!task_remove_tag(task, tag_copy, &removed, &task_error)) {
-        propagate_task_error(error, task_error);
+    if (!task_remove_tag(task, tag_copy, &removed, error)) {
         return FALSE;
     }
     if (removed) {
@@ -239,7 +203,7 @@ const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, G
 
 GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag, GError **error)
 {
-    if (!validate_tag(tag, error)) {
+    if (!task_validate_tag(tag, error)) {
         return NULL;
     }
 

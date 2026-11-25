@@ -110,11 +110,11 @@ static void test_cli_add_domain_errors(void)
     const struct
     {
         const gchar *command;
-        TaskManagerError code;
+        TaskError code;
     } cases[] = {
-        {"add 11 title", TM_ERROR_INVALID_PRIORITY},
-        {"add 5 title #ok #Bad", TM_ERROR_INVALID_TAG},
-        {"add 5 b #y #y", TM_ERROR_DUPLICATE_TAG},
+        {"add 11 title", TASK_ERROR_INVALID_PRIORITY},
+        {"add 5 title #ok #Bad", TASK_ERROR_INVALID_TAG},
+        {"add 5 b #y #y", TASK_ERROR_DUPLICATE_TAG},
     };
 
     for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {
@@ -122,7 +122,7 @@ static void test_cli_add_domain_errors(void)
         g_autoptr(GError) error = NULL;
         const CliStatus status = cli_execute_line(manager, cases[i].command, output, &error);
         g_assert_cmpuint(status, ==, CLI_CONTINUE);
-        g_assert_error(error, TM_ERROR, cases[i].code);
+        g_assert_error(error, TASK_ERROR, cases[i].code);
         g_assert_cmpstr(output->str, ==, "");
         const TaskManagerStats stats = task_manager_get_stats(manager);
         g_assert_cmpuint(stats.tasks, ==, 0);
@@ -267,7 +267,7 @@ static void test_cli_tag(void)
 
     status = cli_execute_line(manager, "tag 1 #work", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
     g_clear_error(&error);
     g_assert_cmpstr(output->str, ==, "");
 
@@ -310,8 +310,8 @@ static void test_cli_tag_invalid(void)
         {"tag abc #work", CLI_ERROR, CLI_ERROR_USAGE},
         {"tag 0 #work", CLI_ERROR, CLI_ERROR_USAGE},
         {"tag 1 work", CLI_ERROR, CLI_ERROR_USAGE},
-        {"tag 1 #Bad", TM_ERROR, TM_ERROR_INVALID_TAG},
-        {"tag 1 #", TM_ERROR, TM_ERROR_INVALID_TAG},
+        {"tag 1 #Bad", TASK_ERROR, TASK_ERROR_INVALID_TAG},
+        {"tag 1 #", TASK_ERROR, TASK_ERROR_INVALID_TAG},
         {"tag 999 #work", TM_ERROR, TM_ERROR_TASK_NOT_FOUND},
     };
 
@@ -436,8 +436,8 @@ static void test_cli_untag_invalid(void)
         {"untag abc #work", CLI_ERROR, CLI_ERROR_USAGE},
         {"untag 0 #work", CLI_ERROR, CLI_ERROR_USAGE},
         {"untag 1 work", CLI_ERROR, CLI_ERROR_USAGE},
-        {"untag 1 #Bad", TM_ERROR, TM_ERROR_INVALID_TAG},
-        {"untag 1 #", TM_ERROR, TM_ERROR_INVALID_TAG},
+        {"untag 1 #Bad", TASK_ERROR, TASK_ERROR_INVALID_TAG},
+        {"untag 1 #", TASK_ERROR, TASK_ERROR_INVALID_TAG},
         {"untag 999 #work", TM_ERROR, TM_ERROR_TASK_NOT_FOUND},
     };
 
@@ -647,8 +647,8 @@ static void test_cli_find_invalid(void)
         {"find", CLI_ERROR, CLI_ERROR_USAGE},
         {"find #work extra", CLI_ERROR, CLI_ERROR_USAGE},
         {"find work", CLI_ERROR, CLI_ERROR_USAGE},
-        {"find #Bad", TM_ERROR, TM_ERROR_INVALID_TAG},
-        {"find #", TM_ERROR, TM_ERROR_INVALID_TAG},
+        {"find #Bad", TASK_ERROR, TASK_ERROR_INVALID_TAG},
+        {"find #", TASK_ERROR, TASK_ERROR_INVALID_TAG},
     };
 
     for (gsize i = 0; i < G_N_ELEMENTS(cases); ++i) {

@@ -47,8 +47,8 @@ static void test_add_with_tags_atomic(gconstpointer data)
     const gboolean duplicate = GPOINTER_TO_INT(data);
     g_ptr_array_add(tags, duplicate ? "new" : "Bad");
     g_assert_cmpuint(task_manager_add_task_with_tags(manager, "invalid", 9, tags, &error), ==, 0);
-    const TaskManagerError expected_error = duplicate ? TM_ERROR_DUPLICATE_TAG : TM_ERROR_INVALID_TAG;
-    g_assert_error(error, TM_ERROR, expected_error);
+    const TaskError expected_error = duplicate ? TASK_ERROR_DUPLICATE_TAG : TASK_ERROR_INVALID_TAG;
+    g_assert_error(error, TASK_ERROR, expected_error);
     g_clear_error(&error);
     g_assert_cmpuint(task_manager_add_task_with_tags(manager, "invalid", 9, tags, NULL), ==, 0);
     g_clear_error(&error);
@@ -206,12 +206,12 @@ static void test_invalid_priority(void)
 
     guint id = task_manager_add_task(manager, title, big_priority, &error);
     g_assert_cmpuint(id, ==, 0);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
 
     id = task_manager_add_task(manager, title, small_priority, &error);
     g_assert_cmpuint(id, ==, 0);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
 
     id = task_manager_add_task(manager, title, small_priority, NULL);
@@ -284,7 +284,7 @@ static void test_tag(void)
 
     result = task_manager_tag_task(manager, task1_id, tag, &error);
     g_assert_false(result);
-    g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
     g_clear_error(&error);
 
     g_assert_cmpuint(task_get_tag_count(task1), ==, 1);
@@ -332,19 +332,19 @@ static void test_invalid_tag(void)
     g_assert_no_error(error);
 
     result = task_manager_tag_task(manager, task_id, empty, &error);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
     g_assert_false(result);
     g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 
     result = task_manager_tag_task(manager, task_id, camel_case, &error);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
     g_assert_false(result);
     g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 
     result = task_manager_tag_task(manager, task_id, space, &error);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
     g_assert_false(result);
     g_assert_cmpuint(task_get_tag_count(task), ==, 0);
@@ -423,7 +423,7 @@ static void test_find_by_tag(void)
 
     gboolean result = task_manager_tag_task(manager, task2_id, tag, &error);
     g_assert_false(result);
-    g_assert_error(error, TM_ERROR, TM_ERROR_DUPLICATE_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
     g_clear_error(&error);
 
     GPtrArray *same_tasks = task_manager_find_tasks_by_tag(manager, tag, &error);
@@ -448,17 +448,17 @@ static void test_find_by_invalid_tag(void)
 
     GPtrArray *empty_tag_tasks = task_manager_find_tasks_by_tag(manager, empty, &error);
     g_assert_null(empty_tag_tasks);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
 
     GPtrArray *camel_case_tag_tasks = task_manager_find_tasks_by_tag(manager, camel_case, &error);
     g_assert_null(camel_case_tag_tasks);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
 
     GPtrArray *space_tag_tasks = task_manager_find_tasks_by_tag(manager, space, &error);
     g_assert_null(space_tag_tasks);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
 
     GPtrArray *space_tag_tasks_again = task_manager_find_tasks_by_tag(manager, space, NULL);
@@ -608,17 +608,17 @@ static void test_invalid_untag(void)
     g_assert_true(task_id != 0);
 
     result = task_manager_untag_task(manager, task_id, empty, &error);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
     g_assert_false(result);
 
     result = task_manager_untag_task(manager, task_id, camel_case, &error);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
     g_assert_false(result);
 
     result = task_manager_untag_task(manager, task_id, space, &error);
-    g_assert_error(error, TM_ERROR, TM_ERROR_INVALID_TAG);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
     g_assert_false(result);
 

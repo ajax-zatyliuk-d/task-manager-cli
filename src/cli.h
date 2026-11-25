@@ -35,7 +35,7 @@ GQuark cli_error_quark(void);
  * @error: (nullable): return location for a #GError, or %NULL
  *
  * Parses and executes one command. If @error is provided, it must point to
- * %NULL. Syntax errors use #CliError; task manager errors are propagated.
+ * %NULL. Syntax errors use #CliError; task and manager errors are propagated.
  * Non-empty lines are recorded before execution, except lines whose first
  * token is history and the exact command quit (after trimming whitespace).
  * Thus, for example, an invalid "history extra" is not recorded, while an
