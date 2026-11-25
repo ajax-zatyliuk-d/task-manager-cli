@@ -74,20 +74,6 @@ static void test_task_new_with_invalid_tag(void)
     g_assert_cmpstr(g_ptr_array_index(tags, 0), ==, "work");
 }
 
-static void test_task_new_with_duplicate_tag(void)
-{
-    g_autoptr(GError) error = NULL;
-    g_autoptr(GPtrArray) tags = g_ptr_array_new();
-    g_ptr_array_add(tags, "work");
-    g_ptr_array_add(tags, "home");
-    g_ptr_array_add(tags, "work");
-    g_assert_null(task_new_with_tags(1, "duplicate", 5, tags, &error));
-    g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
-    g_clear_error(&error);
-    g_assert_null(task_new_with_tags(1, "duplicate", 5, tags, NULL));
-    g_assert_cmpstr(g_ptr_array_index(tags, 0), ==, "work");
-}
-
 static void test_task_new_with_duplicate_tag_in_distinct_strings(void)
 {
     g_autoptr(GError) error = NULL;
@@ -99,6 +85,7 @@ static void test_task_new_with_duplicate_tag_in_distinct_strings(void)
 
     g_assert_null(task_new_with_tags(1, "duplicate", 5, tags, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
+    g_assert_null(task_new_with_tags(1, "duplicate", 5, tags, NULL));
 
     g_assert_cmpuint(tags->len, ==, 3);
     g_assert_cmpstr(g_ptr_array_index(tags, 0), ==, "work");
@@ -322,7 +309,6 @@ int main(int argc, char **argv)
     g_test_add_func("/task/new-with-tags/success", test_task_new_with_tags);
     g_test_add_func("/task/new-with-tags/null", test_task_new_with_null_tags);
     g_test_add_func("/task/new-with-tags/invalid-tag", test_task_new_with_invalid_tag);
-    g_test_add_func("/task/new-with-tags/duplicate-tag", test_task_new_with_duplicate_tag);
     g_test_add_func("/task/new-with-tags/duplicate-distinct-strings", test_task_new_with_duplicate_tag_in_distinct_strings);
     g_test_add_func("/task/new-with-tags/invalid-priority", test_task_new_with_tags_invalid_priority);
     g_test_add_func("/task/new-with-tags/first-error", test_task_new_with_tags_reports_first_error);
