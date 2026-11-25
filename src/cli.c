@@ -189,6 +189,15 @@ static void cmd_enqueue(TaskManager *manager, gchar *const *args, GString *outpu
     return;
 }
 
+static void append_task_list(GString *output, const GPtrArray *tasks)
+{
+    for (guint i = 0; i < tasks->len; ++i) {
+        const Task *task = g_ptr_array_index(tasks, i);
+        g_string_append_printf(
+            output, "id: %u, priority: %d, title: %s\n", task_get_id(task), task_get_priority(task), task_get_title(task));
+    }
+}
+
 static void cmd_find(TaskManager *manager, gchar *const *args, GString *output, GError **error)
 {
     if (args[0] == NULL || args[1] != NULL || args[0][0] != '#') {
@@ -201,12 +210,7 @@ static void cmd_find(TaskManager *manager, gchar *const *args, GString *output, 
         return;
     }
 
-    for (guint i = 0; i < tasks->len; ++i) {
-        const Task *task = g_ptr_array_index(tasks, i);
-        g_string_append_printf(
-            output, "id: %u, priority: %d, title: %s\n", task_get_id(task), task_get_priority(task), task_get_title(task));
-    }
-
+    append_task_list(output, tasks);
     g_ptr_array_unref(tasks);
     return;
 }
@@ -225,12 +229,7 @@ static void cmd_top(TaskManager *manager, gchar *const *args, GString *output, G
     }
 
     GPtrArray *tasks = task_manager_top_tasks(manager, (guint)n);
-    for (guint i = 0; i < tasks->len; ++i) {
-        const Task *task = g_ptr_array_index(tasks, i);
-        g_string_append_printf(
-            output, "id: %u, priority: %d, title: %s\n", task_get_id(task), task_get_priority(task), task_get_title(task));
-    }
-
+    append_task_list(output, tasks);
     g_ptr_array_unref(tasks);
     return;
 }
