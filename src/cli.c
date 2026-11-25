@@ -51,6 +51,16 @@ static gboolean parse_add_tags(gchar *const *first_tag, GPtrArray *tags, GError 
     return TRUE;
 }
 
+static void append_title_words(GString *title, gchar *const *first_word, gchar *const *end)
+{
+    for (gchar *const *word = first_word; word != end; ++word) {
+        if (word != first_word) {
+            g_string_append_c(title, ' ');
+        }
+        g_string_append(title, *word);
+    }
+}
+
 static gboolean parse_add_args(gchar *const *args, gint *priority, GString *title, GPtrArray *tags, GError **error)
 {
     const gchar *usage = "usage: add <priority> <title> [#tag ...]";
@@ -76,12 +86,7 @@ static gboolean parse_add_args(gchar *const *args, gint *priority, GString *titl
         return FALSE;
     }
 
-    for (gchar *const *word = title_words; word != first_tag; ++word) {
-        if (word != title_words) {
-            g_string_append_c(title, ' ');
-        }
-        g_string_append(title, *word);
-    }
+    append_title_words(title, title_words, first_tag);
 
     *priority = (gint)parsed_priority;
     return TRUE;
