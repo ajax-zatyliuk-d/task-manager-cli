@@ -44,8 +44,16 @@ static gboolean validate_initial_tags(const GPtrArray *tags, GError **error)
         return TRUE;
     }
 
+    g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+
     for (guint i = 0; i < tags->len; ++i) {
-        if (!validate_new_tag(g_ptr_array_index(tags, i), tags, i, error)) {
+        const gchar *tag = g_ptr_array_index(tags, i);
+        if (!task_validate_tag(tag, error)) {
+            return FALSE;
+        }
+
+        if (!g_hash_table_add(seen, (gpointer)tag)) {
+            g_set_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
             return FALSE;
         }
     }
