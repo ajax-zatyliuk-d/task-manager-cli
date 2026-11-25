@@ -21,9 +21,27 @@ static gboolean validate_priority(gint priority, GError **error)
     return TRUE;
 }
 
+static gboolean validate_tag(const gchar *tag, GError **error)
+{
+    if (tag == NULL || *tag == '\0') {
+        g_set_error_literal(error, TASK_ERROR, TASK_ERROR_INVALID_TAG, "tag must not be empty");
+        return FALSE;
+    }
+
+    for (const gchar *p = tag; *p != '\0'; ++p) {
+        if (!(g_ascii_isdigit(*p) || g_ascii_islower(*p) || *p == '_')) {
+            g_set_error_literal(
+                error, TASK_ERROR, TASK_ERROR_INVALID_TAG, "tag must contain only lowercase ASCII letters, digits, or underscores");
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
 static gboolean validate_tag_for_addition(const gchar *tag, const GPtrArray *tags, GError **error)
 {
-    if (!task_validate_tag(tag, error)) {
+    if (!validate_tag(tag, error)) {
         return FALSE;
     }
 
@@ -47,7 +65,7 @@ static gboolean validate_initial_tags(const GPtrArray *tags, GError **error)
 
     for (guint i = 0; i < tags->len; ++i) {
         const gchar *tag = g_ptr_array_index(tags, i);
-        if (!task_validate_tag(tag, error)) {
+        if (!validate_tag(tag, error)) {
             return FALSE;
         }
 
@@ -117,24 +135,6 @@ gboolean task_set_priority(Task *task, gint priority, GError **error)
     return TRUE;
 }
 
-gboolean task_validate_tag(const gchar *tag, GError **error)
-{
-    if (tag == NULL || *tag == '\0') {
-        g_set_error_literal(error, TASK_ERROR, TASK_ERROR_INVALID_TAG, "tag must not be empty");
-        return FALSE;
-    }
-
-    for (const gchar *p = tag; *p != '\0'; ++p) {
-        if (!(g_ascii_isdigit(*p) || g_ascii_islower(*p) || *p == '_')) {
-            g_set_error_literal(
-                error, TASK_ERROR, TASK_ERROR_INVALID_TAG, "tag must contain only lowercase ASCII letters, digits, or underscores");
-            return FALSE;
-        }
-    }
-
-    return TRUE;
-}
-
 guint task_get_tag_count(const Task *task) { return task->tags->len; }
 
 const gchar *task_get_tag_at(const Task *task, guint index)
@@ -159,7 +159,7 @@ gboolean task_add_tag(Task *task, const gchar *tag, GError **error)
 
 gboolean task_remove_tag(Task *task, const gchar *tag, gboolean *removed, GError **error)
 {
-    if (!task_validate_tag(tag, error)) {
+    if (!validate_tag(tag, error)) {
         return FALSE;
     }
 

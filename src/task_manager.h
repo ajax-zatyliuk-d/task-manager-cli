@@ -145,19 +145,17 @@ const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, G
 /**
  * task_manager_find_tasks_by_tag:
  * @manager: a task manager
- * @tag: (nullable): tag without '#'; must be non-empty and contain only [a-z0-9_]
- * @error: (nullable): return location for a #GError, or %NULL
+ * @tag: a non-NULL string to search for, without '#'
  *
  * The array is a snapshot of borrowed, read-only task pointers; it is not
  * updated when a task is removed. Each pointer is valid while @manager owns
- * that task. If @error is provided, it must point to %NULL.
+ * that task. The tag is matched exactly without validating its format.
  *
- * Returns: (transfer container) (element-type Task) (nullable): a new array,
- *   empty if no tasks match, or %NULL for an invalid tag, setting
- *   %TASK_ERROR_INVALID_TAG if @error is provided. Release a returned array
- *   with g_ptr_array_unref(), without freeing its elements.
+ * Returns: (transfer container) (element-type Task): a new array, empty if
+ *   no tasks match. Release it with g_ptr_array_unref(), without freeing
+ *   its elements.
  */
-GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag, GError **error);
+GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag);
 
 /**
  * task_manager_top_tasks:

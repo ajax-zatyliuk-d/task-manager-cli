@@ -238,11 +238,7 @@ static void cmd_find(TaskManager *manager, gchar *const *args, GString *output, 
         return;
     }
 
-    g_autoptr(GPtrArray) tasks = task_manager_find_tasks_by_tag(manager, tag, error);
-    if (tasks == NULL) {
-        return;
-    }
-
+    g_autoptr(GPtrArray) tasks = task_manager_find_tasks_by_tag(manager, tag);
     append_task_list(output, tasks);
 }
 

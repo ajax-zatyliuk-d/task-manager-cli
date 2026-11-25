@@ -99,16 +99,6 @@ gint task_get_priority(const Task *task);
 gboolean task_set_priority(Task *task, gint priority, GError **error);
 
 /**
- * task_validate_tag:
- * @tag: (nullable): tag to validate
- * @error: (nullable): return location for a #GError, or %NULL
- *
- * Returns: %TRUE for a non-empty tag containing only [a-z0-9_]; otherwise
- *   %FALSE, setting %TASK_ERROR_INVALID_TAG if @error is provided
- */
-gboolean task_validate_tag(const gchar *tag, GError **error);
-
-/**
  * task_get_tag_count:
  * @task: a task
  *

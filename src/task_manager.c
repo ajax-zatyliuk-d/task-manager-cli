@@ -211,12 +211,8 @@ const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, G
     return lookup_task_or_error(manager->tasks_by_id, id, error);
 }
 
-GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag, GError **error)
+GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag)
 {
-    if (!task_validate_tag(tag, error)) {
-        return NULL;
-    }
-
     GPtrArray *matches = g_ptr_array_new();
     const GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
 
