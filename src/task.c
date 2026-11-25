@@ -110,7 +110,9 @@ gboolean task_set_priority(Task *task, gint priority, GError **error)
     if (!validate_priority(priority, error)) {
         return FALSE;
     }
+
     task->priority = priority;
+
     return TRUE;
 }
 
@@ -174,7 +176,9 @@ gboolean task_add_tag(Task *task, const gchar *tag, GError **error)
     if (!validate_new_tag(tag, task->tags, task->tags->len, error)) {
         return FALSE;
     }
+
     g_ptr_array_add(task->tags, g_strdup(tag));
+
     return TRUE;
 }
 
@@ -183,13 +187,16 @@ gboolean task_remove_tag(Task *task, const gchar *tag, gboolean *removed, GError
     if (!task_validate_tag(tag, error)) {
         return FALSE;
     }
+
     guint index;
     const gboolean found = g_ptr_array_find_with_equal_func(task->tags, tag, g_str_equal, &index);
+
     if (removed != NULL) {
         *removed = found;
     }
     if (found) {
         g_ptr_array_remove_index(task->tags, index);
     }
+
     return TRUE;
 }
