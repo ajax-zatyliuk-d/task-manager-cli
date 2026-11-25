@@ -176,8 +176,30 @@ void task_manager_free(TaskManager *manager)
     g_free(manager);
 }
 
+static void task_manager_register_task(TaskManager *manager, Task *task)
+{
+    const guint task_id = task_get_id(task);
+    g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(task_id), task);
+    g_sequence_insert_sorted(manager->tasks_sorted, task, compare_tasks, NULL);
+
+    for (guint i = 0; i < task_get_tag_count(task); ++i) {
+        const gchar *tag = task_get_tag(task, i);
+        task_manager_add_tasks_by_tag(manager->tasks_by_tag, task, tag);
+        task_manager_add_unique_tags(manager->unique_tags, tag);
+    }
+}
+
 guint task_manager_add_task(TaskManager *manager, const gchar *title, gint priority, GError **error)
 {
+    return task_manager_add_task_with_tags(manager, title, priority, NULL, error);
+}
+
+guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, gint priority, const GPtrArray *tags, GError **error)
+{
+    if (!validate_tags(tags, error)) {
+        return 0;
+    }
+
     if (priority < TASK_PRIORITY_MIN || priority > TASK_PRIORITY_MAX) {
         g_set_error(error, TM_ERROR, TM_ERROR_INVALID_PRIORITY, "priority must be between %d and %d, got %d", TASK_PRIORITY_MIN,
             TASK_PRIORITY_MAX, priority);
@@ -191,32 +213,14 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
     }
 
     Task *task = task_new(task_id, title, priority);
-    g_hash_table_insert(manager->tasks_by_id, GUINT_TO_POINTER(task_id), task);
-    g_sequence_insert_sorted(manager->tasks_sorted, task, compare_tasks, NULL);
+    if (tags != NULL) {
+        for (guint i = 0; i < tags->len; ++i) {
+            task_add_tag(task, g_ptr_array_index(tags, i));
+        }
+    }
 
+    task_manager_register_task(manager, task);
     manager->next_id++;
-
-    return task_get_id(task);
-}
-
-guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, gint priority, const GPtrArray *tags, GError **error)
-{
-    if (!validate_tags(tags, error)) {
-        return 0;
-    }
-
-    const guint task_id = task_manager_add_task(manager, title, priority, error);
-    if (task_id == 0 || tags == NULL || tags->len == 0) {
-        return task_id;
-    }
-
-    Task *task = g_hash_table_lookup(manager->tasks_by_id, GUINT_TO_POINTER(task_id));
-    g_assert_nonnull(task);
-
-    for (guint i = 0; i < tags->len; ++i) {
-        const gchar *tag = g_ptr_array_index(tags, i);
-        attach_tag(manager, task, tag);
-    }
 
     return task_id;
 }
