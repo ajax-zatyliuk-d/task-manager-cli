@@ -60,8 +60,8 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(TaskManager, task_manager_free);
  * Creates a task and assigns it a unique ID. If @error is provided, it must
  * point to %NULL. Failure leaves the manager unchanged.
  *
- * Returns: the new ID, or 0 with %TM_ERROR_INVALID_PRIORITY or
- *   %TM_ERROR_ID_EXHAUSTED on failure
+ * Returns: the new ID, or 0 on failure. If @error is provided, failure sets
+ *   %TM_ERROR_INVALID_PRIORITY or %TM_ERROR_ID_EXHAUSTED.
  */
 guint task_manager_add_task(TaskManager *manager, const gchar *title, gint priority, GError **error);
 
@@ -78,9 +78,9 @@ guint task_manager_add_task(TaskManager *manager, const gchar *title, gint prior
  * If @error is provided, it must point to %NULL. Failure leaves the manager
  * unchanged.
  *
- * Returns: the new ID, or 0 with %TM_ERROR_INVALID_TAG,
- *   %TM_ERROR_DUPLICATE_TAG, %TM_ERROR_INVALID_PRIORITY, or
- *   %TM_ERROR_ID_EXHAUSTED on failure
+ * Returns: the new ID, or 0 on failure. If @error is provided, failure sets
+ *   %TM_ERROR_INVALID_TAG, %TM_ERROR_DUPLICATE_TAG,
+ *   %TM_ERROR_INVALID_PRIORITY, or %TM_ERROR_ID_EXHAUSTED.
  */
 guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, gint priority, const GPtrArray *tags, GError **error);
 
@@ -93,7 +93,8 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
  * Removes and frees the task, including all its queue entries. If @error is
  * provided, it must point to %NULL. Failure leaves the manager unchanged.
  *
- * Returns: %TRUE on success, or %FALSE with %TM_ERROR_TASK_NOT_FOUND
+ * Returns: %TRUE on success, or %FALSE on failure; sets
+ *   %TM_ERROR_TASK_NOT_FOUND if @error is provided
  */
 gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error);
 
@@ -107,8 +108,9 @@ gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error
  * Adds a copy of @tag. If @error is provided, it must point to %NULL. Failure
  * leaves the manager unchanged.
  *
- * Returns: %TRUE on success, or %FALSE with %TM_ERROR_INVALID_TAG,
- *   %TM_ERROR_TASK_NOT_FOUND, or %TM_ERROR_DUPLICATE_TAG
+ * Returns: %TRUE on success, or %FALSE on failure; sets
+ *   %TM_ERROR_INVALID_TAG, %TM_ERROR_TASK_NOT_FOUND, or
+ *   %TM_ERROR_DUPLICATE_TAG if @error is provided
  */
 gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag, GError **error);
 
@@ -122,8 +124,8 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
  * Removes @tag if present; an absent tag is a successful no-op. If @error is
  * provided, it must point to %NULL. Failure leaves the manager unchanged.
  *
- * Returns: %TRUE on success, or %FALSE with %TM_ERROR_INVALID_TAG or
- *   %TM_ERROR_TASK_NOT_FOUND
+ * Returns: %TRUE on success, or %FALSE on failure; sets %TM_ERROR_INVALID_TAG
+ *   or %TM_ERROR_TASK_NOT_FOUND if @error is provided
  */
 gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *tag, GError **error);
 
@@ -137,8 +139,8 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
  * unchanged. The borrowed task is read-only and valid while owned by @manager,
  * until removal, transfer by task_manager_run_next(), or manager destruction.
  *
- * Returns: (transfer none) (nullable): the task, or %NULL with
- *   %TM_ERROR_TASK_NOT_FOUND
+ * Returns: (transfer none) (nullable): the task, or %NULL on failure; sets
+ *   %TM_ERROR_TASK_NOT_FOUND if @error is provided
  */
 const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error);
 
@@ -153,8 +155,9 @@ const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, G
  * that task. If @error is provided, it must point to %NULL.
  *
  * Returns: (transfer container) (element-type Task) (nullable): a new array,
- *   empty if no tasks match, or %NULL with %TM_ERROR_INVALID_TAG. Release a
- *   returned array with g_ptr_array_unref(), without freeing its elements.
+ *   empty if no tasks match, or %NULL for an invalid tag, setting
+ *   %TM_ERROR_INVALID_TAG if @error is provided. Release a returned array
+ *   with g_ptr_array_unref(), without freeing its elements.
  */
 GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag, GError **error);
 
@@ -180,7 +183,8 @@ GPtrArray *task_manager_top_tasks(const TaskManager *manager, guint n);
  * Appends the task to the FIFO queue. Repeated entries are allowed. If @error
  * is provided, it must point to %NULL. Failure leaves the manager unchanged.
  *
- * Returns: %TRUE on success, or %FALSE with %TM_ERROR_TASK_NOT_FOUND
+ * Returns: %TRUE on success, or %FALSE on failure; sets
+ *   %TM_ERROR_TASK_NOT_FOUND if @error is provided
  */
 gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **error);
 

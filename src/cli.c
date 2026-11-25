@@ -274,13 +274,13 @@ static const CliCommand commands[] = {
 
 GQuark cli_error_quark(void) { return g_quark_from_static_string("cli-error-quark"); }
 
-CliStatus cli_execute_line(TaskManager *manager, const gchar *line, GString *output, GError **error)
+CliStatus cli_execute_line(TaskManager *manager, const gchar *command_line, GString *output, GError **error)
 {
-    if (line == NULL) {
+    if (command_line == NULL) {
         return CLI_CONTINUE;
     }
 
-    g_autofree gchar *command = g_strdup(line);
+    g_autofree gchar *command = g_strdup(command_line);
     g_strstrip(command);
 
     if (command[0] == '\0') {
