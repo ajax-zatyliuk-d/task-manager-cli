@@ -11,8 +11,6 @@ struct _Task
     gint64 created_at;
 };
 
-GQuark task_error_quark(void) { return g_quark_from_static_string("task-error-quark"); }
-
 static gboolean validate_priority(gint priority, GError **error)
 {
     if (priority < 1 || priority > 10) {
@@ -60,6 +58,8 @@ static gboolean validate_initial_tags(const GPtrArray *tags, GError **error)
 
     return TRUE;
 }
+
+GQuark task_error_quark(void) { return g_quark_from_static_string("task-error-quark"); }
 
 Task *task_new(guint id, const gchar *title, gint priority, GError **error) { return task_new_with_tags(id, title, priority, NULL, error); }
 
