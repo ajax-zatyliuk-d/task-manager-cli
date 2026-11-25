@@ -314,9 +314,22 @@ static void test_cli_tag(void)
     g_assert_cmpuint(stats.tasks, ==, 1);
     g_ptr_array_unref(tasks);
 
-    g_string_truncate(output, 0);
+    g_string_free(output, TRUE);
+    task_manager_free(manager);
+}
 
-    status = cli_execute_line(manager, "tag 1 #work", output, &error);
+static void test_cli_tag_duplicate(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
+    const guint id = task_manager_add_task(manager, "title", 5, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(id, ==, 1);
+    g_assert_true(task_manager_tag_task(manager, id, "work", &error));
+    g_assert_no_error(error);
+
+    const CliStatus status = cli_execute_line(manager, "tag 1 #work", output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
     g_clear_error(&error);
@@ -331,9 +344,6 @@ static void test_cli_tag(void)
     g_assert_cmpuint(task_get_tag_count(tagged_task), ==, 1);
     g_assert_cmpstr(task_get_tag_at(tagged_task, 0), ==, "work");
     g_ptr_array_unref(matches_after_duplicate);
-
-    g_string_free(output, TRUE);
-    task_manager_free(manager);
 }
 
 static void test_cli_tag_invalid(gconstpointer data)
@@ -1017,16 +1027,20 @@ static void test_cli_stats(void)
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "tasks: 2\ntags: 1\nqueue: 1\n");
-    g_string_truncate(output, 0);
-
-    status = cli_execute_line(manager, "stats extra", output, &error);
-    g_assert_cmpuint(status, ==, CLI_CONTINUE);
-    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
-    g_clear_error(&error);
-    g_assert_cmpstr(output->str, ==, "");
 
     g_string_free(output, TRUE);
     task_manager_free(manager);
+}
+
+static void test_cli_stats_invalid(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GString) output = g_string_new(NULL);
+    const CliStatus status = cli_execute_line(manager, "stats extra", output, &error);
+    g_assert_cmpuint(status, ==, CLI_CONTINUE);
+    g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
+    g_assert_cmpstr(output->str, ==, "");
 }
 
 int main(int argc, char **argv)
@@ -1066,6 +1080,7 @@ int main(int argc, char **argv)
 
     g_test_add_func("/cli/tag/lifecycle", test_cli_tag_lifecycle);
     g_test_add_func("/cli/tag/success", test_cli_tag);
+    g_test_add_func("/cli/tag/duplicate", test_cli_tag_duplicate);
     g_test_add_data_func("/cli/tag/invalid/missing-arguments", GUINT_TO_POINTER(0), test_cli_tag_invalid);
     g_test_add_data_func("/cli/tag/invalid/missing-tag", GUINT_TO_POINTER(1), test_cli_tag_invalid);
     g_test_add_data_func("/cli/tag/invalid/extra-argument", GUINT_TO_POINTER(2), test_cli_tag_invalid);
@@ -1119,6 +1134,7 @@ int main(int argc, char **argv)
     g_test_add_func("/cli/history/limit", test_cli_history_limit);
 
     g_test_add_func("/cli/stats/success", test_cli_stats);
+    g_test_add_func("/cli/stats/invalid", test_cli_stats_invalid);
 
     return g_test_run();
 }
