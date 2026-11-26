@@ -31,6 +31,14 @@ static void append_task_list(GString *output, const GPtrArray *tasks)
     }
 }
 
+static void append_history(GString *output, const GPtrArray *history)
+{
+    for (guint i = 0; i < history->len; ++i) {
+        const gchar *command = g_ptr_array_index(history, i);
+        g_string_append_printf(output, "%s\n", command);
+    }
+}
+
 static const gchar *strip_tag_prefix(const gchar *word) { return word != NULL && word[0] == '#' ? word + 1 : NULL; }
 
 static gchar *const *find_first_tag_token(gchar *const *words)
@@ -266,10 +274,7 @@ static void cmd_history(TaskManager *manager, gchar *const *args, GString *outpu
     }
 
     g_autoptr(GPtrArray) history = task_manager_get_history(manager);
-    for (guint i = 0; i < history->len; ++i) {
-        const gchar *command = g_ptr_array_index(history, i);
-        g_string_append_printf(output, "%s\n", command);
-    }
+    append_history(output, history);
 }
 
 static void cmd_stats(TaskManager *manager, gchar *const *args, GString *output, GError **error)
