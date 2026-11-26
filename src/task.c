@@ -41,7 +41,7 @@ static gboolean validate_tag(const gchar *tag, GError **error)
     return TRUE;
 }
 
-static gboolean validate_tag_for_addition(const gchar *tag, GPtrArray *tags, GError **error)
+static gboolean validate_tag_and_duplication(const gchar *tag, GPtrArray *tags, GError **error)
 {
     if (!validate_tag(tag, error)) {
         return FALSE;
@@ -55,13 +55,13 @@ static gboolean validate_tag_for_addition(const gchar *tag, GPtrArray *tags, GEr
     return TRUE;
 }
 
-static gboolean validate_initial_tags(const GPtrArray *tags, GError **error)
+static gboolean validate_tags(const GPtrArray *tags, GError **error)
 {
     if (tags == NULL) {
         return TRUE;
     }
 
-    g_autoptr(GHashTable) validated_tags = g_hash_table_new(g_str_hash, g_str_equal);
+    g_autoptr(GHashTable) seen_tags = g_hash_table_new(g_str_hash, g_str_equal);
 
     for (guint i = 0; i < tags->len; ++i) {
         const gchar *tag = g_ptr_array_index(tags, i);
@@ -69,7 +69,7 @@ static gboolean validate_initial_tags(const GPtrArray *tags, GError **error)
             return FALSE;
         }
 
-        if (!g_hash_table_add(validated_tags, (gpointer)tag)) {
+        if (!g_hash_table_add(seen_tags, (gpointer)tag)) {
             g_set_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
             return FALSE;
         }
@@ -88,7 +88,7 @@ Task *task_new_with_tags(guint id, const gchar *title, gint priority, const GPtr
         return NULL;
     }
 
-    if (!validate_initial_tags(tags, error)) {
+    if (!validate_tags(tags, error)) {
         return NULL;
     }
 
@@ -148,7 +148,7 @@ const gchar *task_get_tag_at(const Task *task, guint index)
 
 gboolean task_add_tag(Task *task, const gchar *tag, GError **error)
 {
-    if (!validate_tag_for_addition(tag, task->tags, error)) {
+    if (!validate_tag_and_duplication(tag, task->tags, error)) {
         return FALSE;
     }
 
