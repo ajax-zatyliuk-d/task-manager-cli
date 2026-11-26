@@ -273,8 +273,7 @@ void task_manager_record_command(TaskManager *manager, const gchar *command)
         return;
     }
 
-    gchar *old_cmd = g_queue_pop_head(manager->command_history);
-    g_free(old_cmd);
+    g_free(g_queue_pop_head(manager->command_history));
 }
 
 GPtrArray *task_manager_get_history(const TaskManager *manager)
