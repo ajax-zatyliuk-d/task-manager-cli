@@ -55,7 +55,7 @@ static gboolean parse_id(const gchar *word, guint *id, GError **error)
     return TRUE;
 }
 
-static gboolean parse_add_tags(gchar *const *first_tag, GPtrArray *tags, GError **error)
+static gboolean parse_tags(gchar *const *first_tag, GPtrArray *tags, GError **error)
 {
     for (gchar *const *word = first_tag; *word != NULL; ++word) {
         const gchar *tag = strip_tag_prefix(*word);
@@ -92,7 +92,7 @@ static gboolean parse_add_args(gchar *const *args, gint *priority, GString *titl
         return FALSE;
     }
 
-    if (!parse_add_tags(first_tag, tags, error)) {
+    if (!parse_tags(first_tag, tags, error)) {
         return FALSE;
     }
 
