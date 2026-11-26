@@ -44,16 +44,17 @@ static void index_task_tag(TaskManager *manager, Task *task, const gchar *tag)
     g_ptr_array_add(tag_tasks, task);
 }
 
+// A missing tag or task is a no-op; remove tag entries only when their task list becomes empty.
 static void unindex_task_tag(TaskManager *manager, const Task *task, const gchar *tag)
 {
     GPtrArray *tag_tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
-    g_assert_nonnull(tag_tasks);
+    if (tag_tasks == NULL) {
+        return;
+    }
 
-    guint index = 0;
-    const gboolean found = g_ptr_array_find(tag_tasks, task, &index);
-    g_assert_true(found);
-
-    g_ptr_array_remove_index(tag_tasks, index);
+    if (!g_ptr_array_remove(tag_tasks, (gpointer)task)) {
+        return;
+    }
 
     if (tag_tasks->len != 0) {
         return;
@@ -191,13 +192,11 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
 
     // tag may point to the task's own string, which task_remove_tag() frees.
     g_autofree gchar *tag_copy = g_strdup(tag);
-    gboolean removed = FALSE;
-    if (!task_remove_tag(task, tag_copy, &removed, error)) {
+    if (!task_remove_tag(task, tag_copy, error)) {
         return FALSE;
     }
-    if (removed) {
-        unindex_task_tag(manager, task, tag_copy);
-    }
+
+    unindex_task_tag(manager, task, tag_copy);
 
     return TRUE;
 }

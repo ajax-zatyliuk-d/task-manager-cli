@@ -494,6 +494,41 @@ static void test_untag_missing_tag(void)
     g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 0);
 }
 
+static void test_untag_twice(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GError) error = NULL;
+    const guint first_id = task_manager_add_task(manager, "first", 5, &error);
+    g_assert_no_error(error);
+    const guint second_id = task_manager_add_task(manager, "second", 5, &error);
+    g_assert_no_error(error);
+    g_assert_true(task_manager_tag_task(manager, first_id, "work", &error));
+    g_assert_no_error(error);
+    g_assert_true(task_manager_tag_task(manager, second_id, "home", &error));
+    g_assert_no_error(error);
+
+    g_assert_true(task_manager_untag_task(manager, first_id, "work", &error));
+    g_assert_no_error(error);
+    g_assert_true(task_manager_untag_task(manager, first_id, "work", &error));
+    g_assert_no_error(error);
+
+    const Task *first = task_manager_find_task_by_id(manager, first_id, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(first);
+    g_assert_cmpuint(task_get_tag_count(first), ==, 0);
+    const Task *second = task_manager_find_task_by_id(manager, second_id, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(second);
+    g_assert_cmpuint(task_get_tag_count(second), ==, 1);
+    g_assert_cmpstr(task_get_tag_at(second, 0), ==, "home");
+    g_autoptr(GPtrArray) work_matches = task_manager_find_tasks_by_tag(manager, "work");
+    g_assert_cmpuint(work_matches->len, ==, 0);
+    g_autoptr(GPtrArray) home_matches = task_manager_find_tasks_by_tag(manager, "home");
+    g_assert_cmpuint(home_matches->len, ==, 1);
+    g_assert_true(g_ptr_array_index(home_matches, 0) == second);
+    g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 1);
+}
+
 static void test_retag_after_untag(void)
 {
     g_autoptr(TaskManager) manager = task_manager_new();
@@ -1032,6 +1067,7 @@ int main(int argc, char **argv)
     g_test_add_func("/task-manager/untag/shared", test_untag_shared_tag);
     g_test_add_func("/task-manager/untag/last", test_untag_last_occurrence);
     g_test_add_func("/task-manager/untag/missing", test_untag_missing_tag);
+    g_test_add_func("/task-manager/untag/twice", test_untag_twice);
     g_test_add_func("/task-manager/untag/retag", test_retag_after_untag);
     g_test_add_func("/task-manager/untag/borrowed-tag", test_untag_borrowed_tag);
     g_test_add_data_func("/task-manager/untag/invalid/empty", "", test_invalid_untag);

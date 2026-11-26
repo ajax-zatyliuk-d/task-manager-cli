@@ -133,15 +133,15 @@ gboolean task_add_tag(Task *task, const gchar *tag, GError **error);
  * task_remove_tag:
  * @task: a task owned by the caller
  * @tag: (nullable): tag to remove
- * @removed: (out) (optional): whether the tag existed
  * @error: (nullable): return location for a #GError, or %NULL
  *
- * Removes a valid tag, if present; leaves the task unchanged on failure.
+ * Removes a valid tag, if present; an absent tag is a successful no-op.
+ * Failure leaves the task unchanged.
  *
- * Returns: %TRUE on success, or %FALSE with %TASK_ERROR_INVALID_TAG
- *   if @error is provided
+ * Returns: %TRUE on success, including when a valid tag is absent; %FALSE
+ *   on validation failure, setting %TASK_ERROR_INVALID_TAG if @error is provided
  */
-gboolean task_remove_tag(Task *task, const gchar *tag, gboolean *removed, GError **error);
+gboolean task_remove_tag(Task *task, const gchar *tag, GError **error);
 
 /**
  * task_compare:

@@ -233,12 +233,10 @@ static void test_task_remove_tag(void)
     g_assert_nonnull(task);
     g_assert_true(task_add_tag(task, "work_1", &error));
     g_assert_no_error(error);
-    gboolean removed = FALSE;
 
-    g_assert_true(task_remove_tag(task, "work_1", &removed, &error));
+    g_assert_true(task_remove_tag(task, "work_1", &error));
 
     g_assert_no_error(error);
-    g_assert_true(removed);
     g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 }
 
@@ -250,13 +248,12 @@ static void test_task_remove_invalid_tag(void)
     g_assert_nonnull(task);
     g_assert_true(task_add_tag(task, "work_1", &error));
     g_assert_no_error(error);
-    gboolean removed = FALSE;
 
-    g_assert_false(task_remove_tag(task, "Bad", &removed, &error));
+    g_assert_false(task_remove_tag(task, "Bad", &error));
 
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
-    g_assert_false(removed);
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
+    g_assert_cmpstr(task_get_tag_at(task, 0), ==, "work_1");
 }
 
 static void test_task_remove_missing_tag(void)
@@ -265,12 +262,14 @@ static void test_task_remove_missing_tag(void)
     g_autoptr(Task) task = task_new(1, "valid", 1, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
-    gboolean removed = TRUE;
+    g_assert_true(task_add_tag(task, "home", &error));
+    g_assert_no_error(error);
 
-    g_assert_true(task_remove_tag(task, "work_1", &removed, &error));
+    g_assert_true(task_remove_tag(task, "work_1", &error));
 
     g_assert_no_error(error);
-    g_assert_false(removed);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 1);
+    g_assert_cmpstr(task_get_tag_at(task, 0), ==, "home");
 }
 
 static void test_task_compare_created_at_before_id(void)

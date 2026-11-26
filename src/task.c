@@ -156,7 +156,7 @@ gboolean task_add_tag(Task *task, const gchar *tag, GError **error)
     return TRUE;
 }
 
-gboolean task_remove_tag(Task *task, const gchar *tag, gboolean *removed, GError **error)
+gboolean task_remove_tag(Task *task, const gchar *tag, GError **error)
 {
     if (!validate_tag(tag, error)) {
         return FALSE;
@@ -165,9 +165,6 @@ gboolean task_remove_tag(Task *task, const gchar *tag, gboolean *removed, GError
     guint index;
     const gboolean found = g_ptr_array_find_with_equal_func(task->tags, tag, g_str_equal, &index);
 
-    if (removed != NULL) {
-        *removed = found;
-    }
     if (found) {
         g_ptr_array_remove_index(task->tags, index);
     }
