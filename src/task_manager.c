@@ -3,8 +3,6 @@
 
 #include <stddef.h>
 
-#define CMD_HISTORY_LEN 10
-
 struct _TaskManager
 {
     GHashTable *tasks_by_id;

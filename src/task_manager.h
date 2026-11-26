@@ -4,6 +4,8 @@
 
 #include <glib.h>
 
+#define CMD_HISTORY_LEN 10
+
 typedef struct _TaskManager TaskManager;
 typedef struct _TaskManagerStats TaskManagerStats;
 typedef enum _TaskManagerError TaskManagerError;
