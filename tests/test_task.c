@@ -9,7 +9,7 @@ static void test_task_new(void)
 {
     gchar title[] = "Test Task";
     guint id = 1;
-    gint priority = 5;
+    gint priority = MIN_PRIORITY;
 
     g_autoptr(Task) task = task_new(id, title, priority, NULL);
     g_assert_nonnull(task);
@@ -28,14 +28,14 @@ static void test_task_new_with_tags(void)
 {
     g_autoptr(GError) error = NULL;
     g_autoptr(GPtrArray) tags = g_ptr_array_new_with_free_func(g_free);
-    g_autoptr(Task) empty = task_new_with_tags(1, "empty", 5, tags, &error);
+    g_autoptr(Task) empty = task_new_with_tags(1, "empty", MIN_PRIORITY, tags, &error);
     g_assert_no_error(error);
     g_assert_nonnull(empty);
     g_assert_cmpuint(task_get_tag_count(empty), ==, 0);
 
     g_ptr_array_add(tags, g_strdup("work"));
     g_ptr_array_add(tags, g_strdup("home_1"));
-    g_autoptr(Task) task = task_new_with_tags(2, "tagged", 5, tags, &error);
+    g_autoptr(Task) task = task_new_with_tags(2, "tagged", MIN_PRIORITY, tags, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_cmpuint(task_get_tag_count(task), ==, 2);
@@ -49,7 +49,7 @@ static void test_task_new_with_null_tags(void)
 {
     g_autoptr(GError) error = NULL;
 
-    g_autoptr(Task) task = task_new_with_tags(1, "no tags", 5, NULL, &error);
+    g_autoptr(Task) task = task_new_with_tags(1, "no tags", MIN_PRIORITY, NULL, &error);
 
     g_assert_no_error(error);
     g_assert_nonnull(task);
@@ -64,10 +64,10 @@ static void test_task_new_with_invalid_tag(void)
     g_ptr_array_add(tags, "home");
     g_ptr_array_add(tags, "Bad");
 
-    g_assert_null(task_new_with_tags(1, "invalid", 5, tags, &error));
+    g_assert_null(task_new_with_tags(1, "invalid", MIN_PRIORITY, tags, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_clear_error(&error);
-    g_assert_null(task_new_with_tags(1, "invalid", 5, tags, NULL));
+    g_assert_null(task_new_with_tags(1, "invalid", MIN_PRIORITY, tags, NULL));
 
     g_assert_cmpstr(g_ptr_array_index(tags, 0), ==, "work");
 }
@@ -81,9 +81,9 @@ static void test_task_new_with_duplicate_tag_in_distinct_strings(void)
     g_ptr_array_add(tags, g_strdup("work"));
     g_assert_true(g_ptr_array_index(tags, 0) != g_ptr_array_index(tags, 2));
 
-    g_assert_null(task_new_with_tags(1, "duplicate", 5, tags, &error));
+    g_assert_null(task_new_with_tags(1, "duplicate", MIN_PRIORITY, tags, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
-    g_assert_null(task_new_with_tags(1, "duplicate", 5, tags, NULL));
+    g_assert_null(task_new_with_tags(1, "duplicate", MIN_PRIORITY, tags, NULL));
 
     g_assert_cmpuint(tags->len, ==, 3);
     g_assert_cmpstr(g_ptr_array_index(tags, 0), ==, "work");
@@ -115,7 +115,7 @@ static void test_task_new_with_tags_reports_first_error(void)
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
 
-    g_assert_null(task_new_with_tags(1, "invalid", 5, tags, &error));
+    g_assert_null(task_new_with_tags(1, "invalid", MIN_PRIORITY, tags, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG);
 }
 
@@ -195,7 +195,7 @@ static void test_task_set_priority_above_maximum(void)
 static void test_task_add_invalid_tags(void)
 {
     g_autoptr(GError) error = NULL;
-    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_autoptr(Task) task = task_new(1, "valid", MIN_PRIORITY, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
     const gchar *invalid_tags[] = {NULL, "", "Bad", "a-b"};
@@ -212,7 +212,7 @@ static void test_task_add_invalid_tags(void)
 static void test_task_add_duplicate_tag(void)
 {
     g_autoptr(GError) error = NULL;
-    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_autoptr(Task) task = task_new(1, "valid", MIN_PRIORITY, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_true(task_add_tag(task, "work_1", &error));
@@ -228,7 +228,7 @@ static void test_task_add_duplicate_tag(void)
 static void test_task_remove_tag(void)
 {
     g_autoptr(GError) error = NULL;
-    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_autoptr(Task) task = task_new(1, "valid", MIN_PRIORITY, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_true(task_add_tag(task, "work_1", &error));
@@ -243,7 +243,7 @@ static void test_task_remove_tag(void)
 static void test_task_remove_invalid_tag(void)
 {
     g_autoptr(GError) error = NULL;
-    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_autoptr(Task) task = task_new(1, "valid", MIN_PRIORITY, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_true(task_add_tag(task, "work_1", &error));
@@ -259,7 +259,7 @@ static void test_task_remove_invalid_tag(void)
 static void test_task_remove_missing_tag(void)
 {
     g_autoptr(GError) error = NULL;
-    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_autoptr(Task) task = task_new(1, "valid", MIN_PRIORITY, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
     g_assert_true(task_add_tag(task, "home", &error));
@@ -274,8 +274,8 @@ static void test_task_remove_missing_tag(void)
 
 static void test_task_compare_created_at_before_id(void)
 {
-    g_autoptr(Task) older = task_new(2, "older", 5, NULL);
-    g_autoptr(Task) newer = task_new(1, "newer", 5, NULL);
+    g_autoptr(Task) older = task_new(2, "older", MIN_PRIORITY, NULL);
+    g_autoptr(Task) newer = task_new(1, "newer", MIN_PRIORITY, NULL);
     g_assert_nonnull(older);
     g_assert_nonnull(newer);
     task_set_created_at_for_test(older, 100);
@@ -287,8 +287,8 @@ static void test_task_compare_created_at_before_id(void)
 
 static void test_task_compare_id_when_created_at_equal(void)
 {
-    g_autoptr(Task) lower_id = task_new(1, "lower", 5, NULL);
-    g_autoptr(Task) higher_id = task_new(2, "higher", 5, NULL);
+    g_autoptr(Task) lower_id = task_new(1, "lower", MIN_PRIORITY, NULL);
+    g_autoptr(Task) higher_id = task_new(2, "higher", MIN_PRIORITY, NULL);
     g_assert_nonnull(lower_id);
     g_assert_nonnull(higher_id);
     task_set_created_at_for_test(lower_id, 100);
