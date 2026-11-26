@@ -96,10 +96,10 @@ static void test_task_new_with_tags_invalid_priority(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GPtrArray) tags = g_ptr_array_new();
     g_ptr_array_add(tags, "work");
-    g_assert_null(task_new_with_tags(1, "invalid priority", 0, tags, &error));
+    g_assert_null(task_new_with_tags(1, "invalid priority", MIN_PRIORITY - 1, tags, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
-    g_assert_null(task_new_with_tags(1, "invalid priority", 11, tags, NULL));
+    g_assert_null(task_new_with_tags(1, "invalid priority", MAX_PRIORITY + 1, tags, NULL));
     g_assert_cmpstr(g_ptr_array_index(tags, 0), ==, "work");
 }
 
@@ -111,7 +111,7 @@ static void test_task_new_with_tags_reports_first_error(void)
     g_ptr_array_add(tags, "work");
     g_ptr_array_add(tags, "Bad");
 
-    g_assert_null(task_new_with_tags(1, "invalid", 0, tags, &error));
+    g_assert_null(task_new_with_tags(1, "invalid", MIN_PRIORITY - 1, tags, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
 
@@ -122,11 +122,11 @@ static void test_task_new_with_tags_reports_first_error(void)
 static void test_task_new_invalid_priority(void)
 {
     g_autoptr(GError) error = NULL;
-    g_assert_null(task_new(1, "invalid", 0, &error));
+    g_assert_null(task_new(1, "invalid", MIN_PRIORITY - 1, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
-    g_assert_null(task_new(1, "invalid", 0, NULL));
-    g_assert_null(task_new(1, "invalid", 11, &error));
+    g_assert_null(task_new(1, "invalid", MIN_PRIORITY - 1, NULL));
+    g_assert_null(task_new(1, "invalid", MAX_PRIORITY + 1, &error));
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
     g_clear_error(&error);
 }
@@ -135,61 +135,61 @@ static void test_task_new_maximum_priority(void)
 {
     g_autoptr(GError) error = NULL;
 
-    g_autoptr(Task) task = task_new(1, "maximum priority", 10, &error);
+    g_autoptr(Task) task = task_new(1, "maximum priority", MAX_PRIORITY, &error);
 
     g_assert_no_error(error);
     g_assert_nonnull(task);
-    g_assert_cmpint(task_get_priority(task), ==, 10);
+    g_assert_cmpint(task_get_priority(task), ==, MAX_PRIORITY);
 }
 
 static void test_task_set_priority(void)
 {
     g_autoptr(GError) error = NULL;
-    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_autoptr(Task) task = task_new(1, "valid", MIN_PRIORITY, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
-    g_assert_true(task_set_priority(task, 10, &error));
+    g_assert_true(task_set_priority(task, MAX_PRIORITY, &error));
     g_assert_no_error(error);
-    g_assert_cmpint(task_get_priority(task), ==, 10);
+    g_assert_cmpint(task_get_priority(task), ==, MAX_PRIORITY);
 }
 
 static void test_task_set_minimum_priority(void)
 {
     g_autoptr(GError) error = NULL;
-    g_autoptr(Task) task = task_new(1, "valid", 10, &error);
+    g_autoptr(Task) task = task_new(1, "valid", MAX_PRIORITY, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
 
-    g_assert_true(task_set_priority(task, 1, &error));
+    g_assert_true(task_set_priority(task, MIN_PRIORITY, &error));
 
     g_assert_no_error(error);
-    g_assert_cmpint(task_get_priority(task), ==, 1);
+    g_assert_cmpint(task_get_priority(task), ==, MIN_PRIORITY);
 }
 
 static void test_task_set_priority_below_minimum(void)
 {
     g_autoptr(GError) error = NULL;
-    g_autoptr(Task) task = task_new(1, "valid", 1, &error);
+    g_autoptr(Task) task = task_new(1, "valid", MIN_PRIORITY, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
 
-    g_assert_false(task_set_priority(task, 0, &error));
+    g_assert_false(task_set_priority(task, MIN_PRIORITY - 1, &error));
 
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
-    g_assert_cmpint(task_get_priority(task), ==, 1);
+    g_assert_cmpint(task_get_priority(task), ==, MIN_PRIORITY);
 }
 
 static void test_task_set_priority_above_maximum(void)
 {
     g_autoptr(GError) error = NULL;
-    g_autoptr(Task) task = task_new(1, "valid", 10, &error);
+    g_autoptr(Task) task = task_new(1, "valid", MAX_PRIORITY, &error);
     g_assert_no_error(error);
     g_assert_nonnull(task);
 
-    g_assert_false(task_set_priority(task, 11, &error));
+    g_assert_false(task_set_priority(task, MAX_PRIORITY + 1, &error));
 
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY);
-    g_assert_cmpint(task_get_priority(task), ==, 10);
+    g_assert_cmpint(task_get_priority(task), ==, MAX_PRIORITY);
 }
 
 static void test_task_add_invalid_tags(void)

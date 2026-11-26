@@ -2,6 +2,9 @@
 
 #include <glib.h>
 
+#define MIN_PRIORITY 1
+#define MAX_PRIORITY 10
+
 typedef struct _Task Task;
 typedef enum
 {

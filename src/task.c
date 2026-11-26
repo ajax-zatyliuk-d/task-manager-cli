@@ -14,8 +14,9 @@ struct _Task
 
 static gboolean validate_priority(gint priority, GError **error)
 {
-    if (priority < 1 || priority > 10) {
-        g_set_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY, "priority must be between 1 and 10, got %d", priority);
+    if (priority < MIN_PRIORITY || priority > MAX_PRIORITY) {
+        g_set_error(error, TASK_ERROR, TASK_ERROR_INVALID_PRIORITY, "priority must be between %d and %d, got %d", MIN_PRIORITY,
+            MAX_PRIORITY, priority);
         return FALSE;
     }
 

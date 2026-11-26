@@ -175,7 +175,7 @@ typedef struct
 } AddErrorCase;
 
 static const AddErrorCase add_error_cases[] = {
-    {"add 11 title", TASK_ERROR_INVALID_PRIORITY},
+    {NULL, TASK_ERROR_INVALID_PRIORITY},
     {"add 5 title #ok #Bad", TASK_ERROR_INVALID_TAG},
     {"add 5 b #y #y", TASK_ERROR_DUPLICATE_TAG},
 };
@@ -183,10 +183,11 @@ static const AddErrorCase add_error_cases[] = {
 static void test_cli_add_domain_errors(gconstpointer data)
 {
     const AddErrorCase *test_case = data;
+    g_autofree gchar *invalid_priority_command = g_strdup_printf("add %d title", MAX_PRIORITY + 1);
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(GError) error = NULL;
-    const CliStatus status = cli_execute_line(manager, test_case->command, output, &error);
+    const CliStatus status = cli_execute_line(manager, test_case->command ? test_case->command : invalid_priority_command, output, &error);
     g_assert_cmpuint(status, ==, CLI_CONTINUE);
     g_assert_error(error, TASK_ERROR, test_case->code);
     g_assert_cmpstr(output->str, ==, "");

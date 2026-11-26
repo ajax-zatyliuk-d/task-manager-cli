@@ -11,9 +11,9 @@ static void test_add_find(void)
     GError *error = NULL;
 
     gchar *title_first = "First";
-    gint priority_first = 1;
+    gint priority_first = MIN_PRIORITY;
     gchar *title_second = "Second";
-    gint priority_second = 10;
+    gint priority_second = MAX_PRIORITY;
 
     g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
@@ -106,9 +106,9 @@ static void test_add_rejects_invalid_priority_without_consuming_id(void)
     GError *error = NULL;
 
     gchar *title = "Invalid priority";
-    gint priority = 1;
-    gint big_priority = 11;
-    gint small_priority = 0;
+    gint priority = MIN_PRIORITY;
+    gint big_priority = MAX_PRIORITY + 1;
+    gint small_priority = MIN_PRIORITY - 1;
 
     g_autoptr(TaskManager) manager = task_manager_new();
     g_assert_nonnull(manager);
@@ -862,10 +862,10 @@ static void test_run_transfer(void)
     g_assert_cmpstr(task_get_tag_at(returned, 0), ==, "work");
     g_assert_true(task_add_tag(returned, "home", &error));
     g_assert_no_error(error);
-    g_assert_true(task_set_priority(returned, 10, &error));
+    g_assert_true(task_set_priority(returned, MAX_PRIORITY, &error));
     g_assert_no_error(error);
     g_assert_cmpstr(task_get_tag_at(returned, 1), ==, "home");
-    g_assert_cmpint(task_get_priority(returned), ==, 10);
+    g_assert_cmpint(task_get_priority(returned), ==, MAX_PRIORITY);
 }
 
 static void test_run_removes_duplicate_queue_entries(void)
