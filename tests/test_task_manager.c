@@ -489,8 +489,10 @@ static void test_untag_missing_tag(void)
     const guint id = task_manager_add_task(manager, "task", 5, &error);
     g_assert_no_error(error);
 
-    g_assert_true(task_manager_untag_task(manager, id, "work", &error));
-    g_assert_no_error(error);
+    g_assert_false(task_manager_untag_task(manager, id, "work", &error));
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_TAG_NOT_FOUND);
+    g_clear_error(&error);
+    g_assert_false(task_manager_untag_task(manager, id, "work", NULL));
     g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 0);
 }
 
@@ -509,8 +511,9 @@ static void test_untag_twice(void)
 
     g_assert_true(task_manager_untag_task(manager, first_id, "work", &error));
     g_assert_no_error(error);
-    g_assert_true(task_manager_untag_task(manager, first_id, "work", &error));
-    g_assert_no_error(error);
+    g_assert_false(task_manager_untag_task(manager, first_id, "work", &error));
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_TAG_NOT_FOUND);
+    g_clear_error(&error);
 
     const Task *first = task_manager_find_task_by_id(manager, first_id, &error);
     g_assert_no_error(error);

@@ -86,7 +86,8 @@
   `task_manager_tag_task()`: тег, який задача вже має, — `FALSE` та
   `TASK_ERROR_DUPLICATE_TAG` без змін стану (вимога 4 PDF). `add` з повтором
   тегу в одній команді дає ту саму помилку без додавання задачі в колекцію.
-  `task_manager_untag_task()` для відсутнього тегу — тихий `TRUE`.
+  `task_manager_untag_task()` для відсутнього тегу повертає `FALSE` та
+  `TASK_ERROR_TAG_NOT_FOUND` без зміни стану.
   Невідомий ID дає `TM_ERROR_TASK_NOT_FOUND`. `FALSE` супроводжується
   `GError`, якщо викликач передав ненульовий `error`.
 - Дозволено `g_autoptr` / `g_autofree` / `g_auto` (GCC/Clang, GLib ≥ 2.44);

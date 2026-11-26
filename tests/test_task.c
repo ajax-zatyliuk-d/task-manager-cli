@@ -235,7 +235,6 @@ static void test_task_remove_tag(void)
     g_assert_no_error(error);
 
     g_assert_true(task_remove_tag(task, "work_1", &error));
-
     g_assert_no_error(error);
     g_assert_cmpuint(task_get_tag_count(task), ==, 0);
 }
@@ -265,9 +264,11 @@ static void test_task_remove_missing_tag(void)
     g_assert_true(task_add_tag(task, "home", &error));
     g_assert_no_error(error);
 
-    g_assert_true(task_remove_tag(task, "work_1", &error));
-
-    g_assert_no_error(error);
+    g_assert_false(task_remove_tag(task, "work_1", &error));
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_TAG_NOT_FOUND);
+    g_assert_cmpstr(error->message, ==, "tag not found: work_1");
+    g_clear_error(&error);
+    g_assert_false(task_remove_tag(task, "work_1", NULL));
     g_assert_cmpuint(task_get_tag_count(task), ==, 1);
     g_assert_cmpstr(task_get_tag_at(task, 0), ==, "home");
 }

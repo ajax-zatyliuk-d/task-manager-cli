@@ -438,6 +438,35 @@ static void test_cli_tag_invalid(gconstpointer data)
     g_assert_cmpuint(tasks->len, ==, 0);
 }
 
+static void test_cli_untag_missing_tag(void)
+{
+    g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(GString) output = g_string_new(NULL);
+    g_autoptr(GError) error = NULL;
+
+    g_assert_cmpint(cli_execute_line(manager, "add " G_STRINGIFY(MIN_PRIORITY) " one #1", output, &error), ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_string_truncate(output, 0);
+    g_assert_cmpint(cli_execute_line(manager, "tag 1 #one", output, &error), ==, CLI_CONTINUE);
+    g_assert_no_error(error);
+    g_string_truncate(output, 0);
+
+    g_assert_cmpint(cli_execute_line(manager, "untag 1 #three", output, &error), ==, CLI_CONTINUE);
+    g_assert_error(error, TASK_ERROR, TASK_ERROR_TAG_NOT_FOUND);
+    g_assert_cmpstr(error->message, ==, "tag not found: three");
+    g_assert_cmpstr(output->str, ==, "");
+    g_clear_error(&error);
+
+    const Task *task = task_manager_find_task_by_id(manager, 1, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(task);
+    g_assert_cmpuint(task_get_tag_count(task), ==, 2);
+    g_autoptr(GPtrArray) matches = task_manager_find_tasks_by_tag(manager, "one");
+    g_assert_cmpuint(matches->len, ==, 1);
+    g_assert_true(g_ptr_array_index(matches, 0) == task);
+    g_assert_cmpuint(task_manager_get_stats(manager).unique_tags, ==, 2);
+}
+
 static void test_cli_untag(void)
 {
     g_autoptr(TaskManager) manager = task_manager_new();
@@ -1120,6 +1149,7 @@ int main(int argc, char **argv)
     g_test_add_data_func("/cli/tag/unknown-id", &tag_cases[TAG_UNKNOWN_ID], test_cli_tag_invalid);
 
     g_test_add_func("/cli/untag/success", test_cli_untag);
+    g_test_add_func("/cli/untag/missing-tag", test_cli_untag_missing_tag);
     g_test_add_data_func("/cli/untag/invalid/missing-arguments", &untag_cases[UNTAG_INVALID_MISSING_ARGUMENTS], test_cli_untag_invalid);
     g_test_add_data_func("/cli/untag/invalid/missing-tag", &untag_cases[UNTAG_INVALID_MISSING_TAG], test_cli_untag_invalid);
     g_test_add_data_func("/cli/untag/invalid/extra-argument", &untag_cases[UNTAG_INVALID_EXTRA_ARGUMENT], test_cli_untag_invalid);

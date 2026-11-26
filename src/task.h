@@ -10,7 +10,8 @@ typedef enum
 {
     TASK_ERROR_INVALID_PRIORITY,
     TASK_ERROR_INVALID_TAG,
-    TASK_ERROR_DUPLICATE_TAG
+    TASK_ERROR_DUPLICATE_TAG,
+    TASK_ERROR_TAG_NOT_FOUND
 } TaskError;
 
 #define TASK_ERROR (task_error_quark())

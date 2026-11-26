@@ -166,9 +166,12 @@ gboolean task_remove_tag(Task *task, const gchar *tag, GError **error)
     guint index;
     const gboolean found = g_ptr_array_find_with_equal_func(task->tags, tag, g_str_equal, &index);
 
-    if (found) {
-        g_ptr_array_remove_index(task->tags, index);
+    if (!found) {
+        g_set_error(error, TASK_ERROR, TASK_ERROR_TAG_NOT_FOUND, "tag not found: %s", tag);
+        return FALSE;
     }
+
+    g_ptr_array_remove_index(task->tags, index);
 
     return TRUE;
 }
