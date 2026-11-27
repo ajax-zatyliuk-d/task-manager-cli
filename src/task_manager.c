@@ -206,13 +206,12 @@ const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, G
 
 GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag)
 {
-    GPtrArray *matches = g_ptr_array_new();
     const GPtrArray *tasks = g_hash_table_lookup(manager->tasks_by_tag, tag);
-
     if (tasks == NULL) {
-        return matches;
+        return g_ptr_array_new();
     }
 
+    GPtrArray *matches = g_ptr_array_sized_new(tasks->len);
     for (guint i = 0; i < tasks->len; ++i) {
         g_ptr_array_add(matches, g_ptr_array_index(tasks, i));
     }
