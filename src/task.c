@@ -12,7 +12,7 @@ struct _Task
     gint64 created_at;
 };
 
-static gboolean string_array_contains_before(const GPtrArray *strings, const gchar *value, guint length)
+static gboolean contains_in_string_array_before(const GPtrArray *strings, const gchar *value, guint length)
 {
     for (guint i = 0; i < length; ++i) {
         if (g_str_equal(value, g_ptr_array_index(strings, i))) {
@@ -78,7 +78,7 @@ static gboolean validate_tags(const GPtrArray *tags, GError **error)
             return FALSE;
         }
 
-        if (string_array_contains_before(tags, tag, i)) {
+        if (contains_in_string_array_before(tags, tag, i)) {
             g_set_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
             return FALSE;
         }
