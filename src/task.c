@@ -97,7 +97,7 @@ Task *task_new_with_tags(guint id, const gchar *title, gint priority, const GPtr
     task->id = id;
     task->title = g_strdup(title);
     task->priority = priority;
-    task->tags = g_ptr_array_new_with_free_func(g_free);
+    task->tags = g_ptr_array_new_full(tags != NULL ? tags->len : 0, g_free);
     task->created_at = g_get_monotonic_time();
 
     if (tags == NULL) {
