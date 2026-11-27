@@ -8,7 +8,7 @@ struct _TaskManager
     GHashTable *tasks_by_id;
     GHashTable *tasks_by_tag;
     GHashTable *unique_tags;
-    GSequence *tasks_sorted;
+    GSequence *tasks_sorted_by_priority;
     GQueue *run_queue;
     GQueue *command_history;
     guint next_id;
@@ -70,7 +70,7 @@ static gint compare_tasks(gconstpointer a, gconstpointer b, gpointer user_data)
 
 static void index_task(TaskManager *manager, Task *task)
 {
-    g_sequence_insert_sorted(manager->tasks_sorted, task, compare_tasks, NULL);
+    g_sequence_insert_sorted(manager->tasks_sorted_by_priority, task, compare_tasks, NULL);
 
     for (guint i = 0; i < task_get_tag_count(task); ++i) {
         const gchar *tag = task_get_tag_at(task, i);
@@ -85,7 +85,7 @@ static void unindex_task(TaskManager *manager, Task *task)
         unindex_task_tag(manager, task, task_get_tag_at(task, i));
     }
 
-    GSequenceIter *it = g_sequence_lookup(manager->tasks_sorted, task, compare_tasks, NULL);
+    GSequenceIter *it = g_sequence_lookup(manager->tasks_sorted_by_priority, task, compare_tasks, NULL);
     g_assert_nonnull(it);
     g_sequence_remove(it);
 
@@ -100,7 +100,7 @@ TaskManager *task_manager_new(void)
     manager->tasks_by_id = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, destroy_task);
     manager->tasks_by_tag = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, destroy_tasks_array);
     manager->unique_tags = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-    manager->tasks_sorted = g_sequence_new(NULL);
+    manager->tasks_sorted_by_priority = g_sequence_new(NULL);
     manager->run_queue = g_queue_new();
     manager->command_history = g_queue_new();
     manager->next_id = 1;
@@ -116,7 +116,7 @@ void task_manager_free(TaskManager *manager)
 
     g_hash_table_destroy(manager->unique_tags);
     g_hash_table_destroy(manager->tasks_by_tag);
-    g_sequence_free(manager->tasks_sorted);
+    g_sequence_free(manager->tasks_sorted_by_priority);
     g_hash_table_destroy(manager->tasks_by_id);
     g_queue_free(manager->run_queue);
     g_queue_free_full(manager->command_history, g_free);
@@ -223,7 +223,7 @@ GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gcha
 GPtrArray *task_manager_top_tasks(const TaskManager *manager, guint n)
 {
     GPtrArray *tasks = g_ptr_array_new();
-    for (GSequenceIter *it = g_sequence_get_begin_iter(manager->tasks_sorted); tasks->len < n && !g_sequence_iter_is_end(it);
+    for (GSequenceIter *it = g_sequence_get_begin_iter(manager->tasks_sorted_by_priority); tasks->len < n && !g_sequence_iter_is_end(it);
          it = g_sequence_iter_next(it)) {
         g_ptr_array_add(tasks, g_sequence_get(it));
     }

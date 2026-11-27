@@ -91,7 +91,7 @@ CMake збирає код із `src/` у статичну бібліотеку `
 | `tasks_by_id` (`GHashTable`) | Пошук за ID. Таблиця володіє задачами |
 | `tasks_by_tag` (`GHashTable` → `GPtrArray`) | Пошук за тегом. Таблиця володіє ключами й масивами. Масиви позичають `Task *` |
 | `unique_tags` (`GHashTable` як множина) | Облік унікальних тегів |
-| `tasks_sorted` (`GSequence`) | Порядок для `top`: вищий пріоритет, старіша задача, менший ID |
+| `tasks_sorted_by_priority` (`GSequence`) | Порядок для `top`: вищий пріоритет, старіша задача, менший ID |
 | `run_queue` (`GQueue`) | FIFO-черга з позиченими `Task *` |
 | `command_history` (`GQueue`) | Черга, що володіє копіями останніх 10 команд |
 | `Task.tags` (`GPtrArray`) | Масив, що володіє рядками тегів задачі |
