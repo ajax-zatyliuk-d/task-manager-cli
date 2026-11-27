@@ -4,7 +4,7 @@
 
 #include <glib.h>
 
-#define VALID_PRIORITY (MIN_PRIORITY + (MAX_PRIORITY - MIN_PRIORITY) / 2)
+#define VALID_PRIORITY (MIN_PRIORITY + MAX_PRIORITY) / 2
 
 static void test_cli_invalid_arguments(gconstpointer data)
 {
