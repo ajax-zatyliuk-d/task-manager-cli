@@ -6,6 +6,11 @@
 typedef struct _CliCommand CliCommand;
 typedef void (*CliHandler)(TaskManager *, gchar *const *, GString *, GError **);
 
+struct _Cli
+{
+    GRegex *separator;
+};
+
 struct _CliCommand
 {
     const gchar *name;
@@ -303,7 +308,30 @@ static const CliCommand commands[] = {
 
 GQuark cli_error_quark(void) { return g_quark_from_static_string("cli-error-quark"); }
 
-CliStatus cli_execute_line(TaskManager *manager, const gchar *command_line, GString *output, GError **error)
+Cli *cli_new(GError **error)
+{
+    GRegex *separator = g_regex_new("[ \t]+", 0, 0, error);
+    if (separator == NULL) {
+        return NULL;
+    }
+
+    Cli *cli = g_new(Cli, 1);
+    cli->separator = separator;
+
+    return cli;
+}
+
+void cli_free(Cli *cli)
+{
+    if (cli == NULL) {
+        return;
+    }
+
+    g_regex_unref(cli->separator);
+    g_free(cli);
+}
+
+CliStatus cli_execute_line(Cli *cli, TaskManager *manager, const gchar *command_line, GString *output, GError **error)
 {
     if (command_line == NULL) {
         return CLI_CONTINUE;
@@ -325,7 +353,7 @@ CliStatus cli_execute_line(TaskManager *manager, const gchar *command_line, GStr
         return CLI_QUIT;
     }
 
-    g_auto(GStrv) words = g_regex_split_simple("[ \t]+", command, 0, 0);
+    g_auto(GStrv) words = g_regex_split(cli->separator, command, 0);
     if (g_strcmp0(words[0], "history") != 0) {
         task_manager_record_command(manager, command);
     }

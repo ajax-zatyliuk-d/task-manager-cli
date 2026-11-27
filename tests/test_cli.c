@@ -12,8 +12,11 @@ static void test_cli_invalid_arguments(gconstpointer data)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
-    g_assert_cmpint(cli_execute_line(manager, command, output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, command, output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
     g_assert_cmpstr(output->str, ==, "");
 }
@@ -23,13 +26,16 @@ static void test_cli_empty_quit_and_unknown(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
-    g_assert_cmpint(cli_execute_line(manager, "   ", output, &error), ==, CLI_CONTINUE);
-    g_assert_cmpint(cli_execute_line(manager, "quit", output, &error), ==, CLI_QUIT);
+    g_assert_cmpint(cli_execute_line(cli, manager, "   ", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "quit", output, &error), ==, CLI_QUIT);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "");
 
-    g_assert_cmpint(cli_execute_line(manager, "unknown", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "unknown", output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, CLI_ERROR, CLI_ERROR_UNKNOWN_COMMAND);
     g_assert_cmpstr(output->str, ==, "");
 }
@@ -39,10 +45,13 @@ static void test_cli_rejects_invalid_utf8(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
     const gchar command[] = "add 5 \xFF";
 
-    g_assert_cmpint(cli_execute_line(manager, command, output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, command, output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
     g_assert_cmpstr(output->str, ==, "");
 
@@ -55,10 +64,13 @@ static void test_cli_add(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
-    g_autofree gchar *command = g_strdup_printf("add  %d  buy   milk  #home #shop", VALID_PRIORITY);
+    g_autofree gchar *command = g_strdup_printf("add \t %d  buy\t  milk  #home\t#shop", VALID_PRIORITY);
 
-    g_assert_cmpint(cli_execute_line(manager, command, output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, command, output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "added task 1\n");
 
@@ -77,10 +89,13 @@ static void test_cli_passes_task_error(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
     g_autofree gchar *command = g_strdup_printf("add %d title #Bad", VALID_PRIORITY);
 
-    g_assert_cmpint(cli_execute_line(manager, command, output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, command, output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, TASK_ERROR, TASK_ERROR_INVALID_TAG);
     g_assert_cmpstr(output->str, ==, "");
 }
@@ -90,6 +105,9 @@ static void test_cli_del(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
     const guint id = task_manager_add_task(manager, "task", VALID_PRIORITY, &error);
     g_assert_no_error(error);
@@ -97,7 +115,7 @@ static void test_cli_del(void)
     g_autofree gchar *command = g_strdup_printf("del %u", id);
     g_autofree gchar *expected = g_strdup_printf("deleted task %u\n", id);
 
-    g_assert_cmpint(cli_execute_line(manager, command, output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, command, output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, expected);
 }
@@ -107,8 +125,11 @@ static void test_cli_passes_manager_error(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
-    g_assert_cmpint(cli_execute_line(manager, "del 999", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "del 999", output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, TM_ERROR, TM_ERROR_TASK_NOT_FOUND);
     g_assert_cmpstr(output->str, ==, "");
 }
@@ -118,6 +139,9 @@ static void test_cli_tag(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
     const guint id = task_manager_add_task(manager, "task", VALID_PRIORITY, &error);
     g_assert_no_error(error);
@@ -125,7 +149,7 @@ static void test_cli_tag(void)
     g_autofree gchar *command = g_strdup_printf("tag %u #work", id);
     g_autofree gchar *expected = g_strdup_printf("tagged task %u with work\n", id);
 
-    g_assert_cmpint(cli_execute_line(manager, command, output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, command, output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, expected);
 }
@@ -135,6 +159,9 @@ static void test_cli_untag(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
     const guint id = task_manager_add_task(manager, "task", VALID_PRIORITY, &error);
     g_assert_no_error(error);
@@ -145,7 +172,7 @@ static void test_cli_untag(void)
     g_autofree gchar *command = g_strdup_printf("untag %u #work", id);
     g_autofree gchar *expected = g_strdup_printf("untagged task %u from work\n", id);
 
-    g_assert_cmpint(cli_execute_line(manager, command, output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, command, output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, expected);
 }
@@ -155,6 +182,9 @@ static void test_cli_enqueue(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
     const guint id = task_manager_add_task(manager, "task", VALID_PRIORITY, &error);
     g_assert_no_error(error);
@@ -162,7 +192,7 @@ static void test_cli_enqueue(void)
     g_autofree gchar *command = g_strdup_printf("enqueue %u", id);
     g_autofree gchar *expected = g_strdup_printf("enqueued task %u\n", id);
 
-    g_assert_cmpint(cli_execute_line(manager, command, output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, command, output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, expected);
 }
@@ -172,6 +202,9 @@ static void test_cli_run_and_empty_queue(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
     const guint id = task_manager_add_task(manager, "task", VALID_PRIORITY, &error);
     g_assert_no_error(error);
@@ -181,13 +214,13 @@ static void test_cli_run_and_empty_queue(void)
 
     g_autofree gchar *expected = g_strdup_printf("running: task (id %u, priority %d)\n", id, VALID_PRIORITY);
 
-    g_assert_cmpint(cli_execute_line(manager, "run", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "run", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, expected);
 
     g_string_truncate(output, 0);
 
-    g_assert_cmpint(cli_execute_line(manager, "run", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "run", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "queue is empty\n");
 }
@@ -197,6 +230,9 @@ static void test_cli_find_matches(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
     const guint first = task_manager_add_task(manager, "first", VALID_PRIORITY, &error);
     const guint second = task_manager_add_task(manager, "second", VALID_PRIORITY, &error);
@@ -211,13 +247,13 @@ static void test_cli_find_matches(void)
     g_autofree gchar *reverse = g_strdup_printf(
         "id: %u, priority: %d, title: second\nid: %u, priority: %d, title: first\n", second, VALID_PRIORITY, first, VALID_PRIORITY);
 
-    g_assert_cmpint(cli_execute_line(manager, "find #work", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "find #work", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_true(g_str_equal(output->str, forward) || g_str_equal(output->str, reverse));
 
     g_string_truncate(output, 0);
 
-    g_assert_cmpint(cli_execute_line(manager, "find #missing", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "find #missing", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "");
 }
@@ -227,6 +263,9 @@ static void test_cli_top(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
     task_manager_add_task(manager, "low", MIN_PRIORITY, &error);
     const guint high = task_manager_add_task(manager, "high", MAX_PRIORITY, &error);
@@ -234,7 +273,7 @@ static void test_cli_top(void)
 
     g_autofree gchar *expected = g_strdup_printf("id: %u, priority: %d, title: high\n", high, MAX_PRIORITY);
 
-    g_assert_cmpint(cli_execute_line(manager, "top 1", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "top 1", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, expected);
 }
@@ -244,28 +283,31 @@ static void test_cli_history_records_commands(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
-    g_assert_cmpint(cli_execute_line(manager, "stats", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "stats", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_string_truncate(output, 0);
 
-    g_assert_cmpint(cli_execute_line(manager, "top -1", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "top -1", output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
     g_clear_error(&error);
 
-    g_assert_cmpint(cli_execute_line(manager, "unknown", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "unknown", output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, CLI_ERROR, CLI_ERROR_UNKNOWN_COMMAND);
     g_clear_error(&error);
 
-    g_assert_cmpint(cli_execute_line(manager, "history extra", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "history extra", output, &error), ==, CLI_CONTINUE);
     g_assert_error(error, CLI_ERROR, CLI_ERROR_USAGE);
     g_clear_error(&error);
 
-    g_assert_cmpint(cli_execute_line(manager, "quit", output, &error), ==, CLI_QUIT);
-    g_assert_cmpint(cli_execute_line(manager, " ", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "quit", output, &error), ==, CLI_QUIT);
+    g_assert_cmpint(cli_execute_line(cli, manager, " ", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
 
-    g_assert_cmpint(cli_execute_line(manager, "history", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "history", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "stats\ntop -1\nunknown\n");
 }
@@ -275,6 +317,9 @@ static void test_cli_stats(void)
     g_autoptr(GError) error = NULL;
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(TaskManager) manager = task_manager_new();
+    g_autoptr(Cli) cli = cli_new(&error);
+    g_assert_no_error(error);
+    g_assert_nonnull(cli);
 
     const guint first = task_manager_add_task(manager, "first", VALID_PRIORITY, &error);
     const guint second = task_manager_add_task(manager, "second", VALID_PRIORITY, &error);
@@ -286,7 +331,7 @@ static void test_cli_stats(void)
     g_assert_true(task_manager_enqueue_task(manager, second, &error));
     g_assert_no_error(error);
 
-    g_assert_cmpint(cli_execute_line(manager, "stats", output, &error), ==, CLI_CONTINUE);
+    g_assert_cmpint(cli_execute_line(cli, manager, "stats", output, &error), ==, CLI_CONTINUE);
     g_assert_no_error(error);
     g_assert_cmpstr(output->str, ==, "tasks: 2\ntags: 1\nqueue: 3\n");
 }

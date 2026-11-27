@@ -29,11 +29,11 @@ static void setup_terminal(void)
 }
 
 static gboolean execute_and_print_line(
-    TaskManager *manager, const gchar *line, GString *output, CliStatus *status, gboolean *had_command_error)
+    Cli *cli, TaskManager *manager, const gchar *line, GString *output, CliStatus *status, gboolean *had_command_error)
 {
     g_autoptr(GError) error = NULL;
     g_string_truncate(output, 0);
-    *status = cli_execute_line(manager, line, output, &error);
+    *status = cli_execute_line(cli, manager, line, output, &error);
 
     g_print("%s", output->str);
     // g_print() may already have flushed stdout, so check both the stream and flush errors.
@@ -54,6 +54,14 @@ int main(void)
 {
     setlocale(LC_CTYPE, "");
     setup_terminal();
+
+    g_autoptr(GError) error = NULL;
+    g_autoptr(Cli) cli = cli_new(&error);
+    if (cli == NULL) {
+        g_printerr("error: %s\n", error->message);
+        return 1;
+    }
+
     g_autoptr(TaskManager) manager = task_manager_new();
     g_autoptr(GString) output = g_string_new(NULL);
     g_autoptr(GIOChannel) channel = g_io_channel_unix_new(STDIN_FILENO);
@@ -61,13 +69,13 @@ int main(void)
 
     while (TRUE) {
         g_autofree gchar *line = NULL;
-        g_autoptr(GError) error = NULL;
+        error = NULL;
         const GIOStatus read_status = g_io_channel_read_line(channel, &line, NULL, NULL, &error);
 
         switch (read_status) {
             case G_IO_STATUS_NORMAL: {
                 CliStatus status;
-                if (!execute_and_print_line(manager, line, output, &status, &had_command_error)) {
+                if (!execute_and_print_line(cli, manager, line, output, &status, &had_command_error)) {
                     return 1;
                 }
                 if (status == CLI_QUIT) {
