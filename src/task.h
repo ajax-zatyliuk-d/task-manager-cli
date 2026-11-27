@@ -25,10 +25,13 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(Task, task_free);
 
 guint task_get_id(const Task *task);
 const gchar *task_get_title(const Task *task);
+
 gint task_get_priority(const Task *task);
 gboolean task_set_priority(Task *task, gint priority, GError **error);
+
 guint task_get_tag_count(const Task *task);
 const gchar *task_get_tag_at(const Task *task, guint index);
 gboolean task_add_tag(Task *task, const gchar *tag, GError **error);
 gboolean task_remove_tag(Task *task, const gchar *tag, GError **error);
+
 gint task_compare(const Task *first, const Task *second);
