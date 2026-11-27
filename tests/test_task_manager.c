@@ -26,7 +26,12 @@ static void test_add_find(void)
     g_assert_nonnull(second_task);
 
     g_assert_cmpuint(task_get_id(first_task), ==, first);
+    g_assert_cmpstr(task_get_title(first_task), ==, "first");
+    g_assert_cmpuint(task_get_tag_count(first_task), ==, 0);
+
     g_assert_cmpuint(task_get_id(second_task), ==, second);
+    g_assert_cmpstr(task_get_title(second_task), ==, "second");
+    g_assert_cmpuint(task_get_tag_count(second_task), ==, 0);
 }
 
 static void test_add_id_exhausted(void)
