@@ -18,7 +18,7 @@ static void destroy_task(gpointer task) { task_free(task); }
 
 static void destroy_tasks_array(gpointer ptr) { g_ptr_array_free(ptr, TRUE); }
 
-static Task *lookup_task_or_error(GHashTable *tasks_by_id, guint id, GError **error)
+static Task *lookup_task(GHashTable *tasks_by_id, guint id, GError **error)
 {
     Task *task = g_hash_table_lookup(tasks_by_id, GUINT_TO_POINTER(id));
 
@@ -152,7 +152,7 @@ guint task_manager_add_task_with_tags(TaskManager *manager, const gchar *title, 
 
 gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error)
 {
-    Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
+    Task *task = lookup_task(manager->tasks_by_id, id, error);
     if (task == NULL) {
         return FALSE;
     }
@@ -167,7 +167,7 @@ gboolean task_manager_remove_task(TaskManager *manager, guint id, GError **error
 
 gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag, GError **error)
 {
-    Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
+    Task *task = lookup_task(manager->tasks_by_id, id, error);
     if (task == NULL) {
         return FALSE;
     }
@@ -183,7 +183,7 @@ gboolean task_manager_tag_task(TaskManager *manager, guint id, const gchar *tag,
 
 gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *tag, GError **error)
 {
-    Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
+    Task *task = lookup_task(manager->tasks_by_id, id, error);
     if (task == NULL) {
         return FALSE;
     }
@@ -201,7 +201,7 @@ gboolean task_manager_untag_task(TaskManager *manager, guint id, const gchar *ta
 
 const Task *task_manager_find_task_by_id(const TaskManager *manager, guint id, GError **error)
 {
-    return lookup_task_or_error(manager->tasks_by_id, id, error);
+    return lookup_task(manager->tasks_by_id, id, error);
 }
 
 GPtrArray *task_manager_find_tasks_by_tag(const TaskManager *manager, const gchar *tag)
@@ -233,7 +233,7 @@ GPtrArray *task_manager_top_tasks(const TaskManager *manager, guint n)
 
 gboolean task_manager_enqueue_task(TaskManager *manager, guint id, GError **error)
 {
-    Task *task = lookup_task_or_error(manager->tasks_by_id, id, error);
+    Task *task = lookup_task(manager->tasks_by_id, id, error);
     if (task == NULL) {
         return FALSE;
     }
