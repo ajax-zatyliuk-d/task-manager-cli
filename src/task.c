@@ -55,13 +55,24 @@ static gboolean validate_tag_and_duplication(const gchar *tag, GPtrArray *tags, 
     return TRUE;
 }
 
+static gboolean has_previous_tag(const GPtrArray *tags, guint tag_index)
+{
+    const gchar *tag = g_ptr_array_index(tags, tag_index);
+
+    for (guint i = 0; i < tag_index; ++i) {
+        if (g_str_equal(tag, g_ptr_array_index(tags, i))) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 static gboolean validate_tags(const GPtrArray *tags, GError **error)
 {
     if (tags == NULL) {
         return TRUE;
     }
-
-    g_autoptr(GHashTable) seen_tags = g_hash_table_new(g_str_hash, g_str_equal);
 
     for (guint i = 0; i < tags->len; ++i) {
         const gchar *tag = g_ptr_array_index(tags, i);
@@ -69,7 +80,7 @@ static gboolean validate_tags(const GPtrArray *tags, GError **error)
             return FALSE;
         }
 
-        if (!g_hash_table_add(seen_tags, (gpointer)tag)) {
+        if (has_previous_tag(tags, i)) {
             g_set_error(error, TASK_ERROR, TASK_ERROR_DUPLICATE_TAG, "duplicate tag: %s", tag);
             return FALSE;
         }
